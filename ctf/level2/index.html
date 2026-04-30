@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Log 2</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="container">
+  <h1>System Diagnostics</h1>
+  <p id="status">Running checks...</p>
+</div>
+<script>
+  fetch('/api/headers')
+    .then(r => {
+      window._k = r.headers.get('X-Debug-Key');
+      return r.json();
+    })
+    .then(() => {
+      document.getElementById('status').innerText = 'All systems nominal.';
+    });
+
+  var _0x1a2b = ['\x6b\x33\x79', '\x5f\x66\x30', '\x75\x6e\x64'];
+  function _0xcheck(_0xi) {
+    if (_0xi === _0x1a2b.join('')) {
+      fetch('/api/verify2', { headers: { 'X-Key': _0xi } })
+        .then(r => r.json())
+        .then(d => { window._d = d; });
+    }
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') _0xcheck(window._k || '');
+  });
+</script>
+</body>
+</html>
