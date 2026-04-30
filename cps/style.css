@@ -15,6 +15,7 @@ div {
 
 .box {
     flex-direction: column;
+    margin-top: 70px;
 }
 
 body {
