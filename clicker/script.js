@@ -59,7 +59,7 @@ function loadGame() {
     const g = parseFloat(localStorage.getItem('gps')) || 0;
     const savedChk = localStorage.getItem('chk');
 
-    if (savedChk !== null && savedChk !== checksum(s, c, g)) {
+    if (savedChk === null || savedChk !== checksum(s, c, g)) {
         // Tampered — reset to zero
         console.warn("Save data tampered. Resetting.");
         localStorage.clear();
