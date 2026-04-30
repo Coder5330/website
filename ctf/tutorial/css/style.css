@@ -1,0 +1,19 @@
+body {
+    background: #0d0d0d;
+    color: #e6e6e6;
+    font-family: monospace;
+}
+
+.container {
+    max-width: 600px;
+    margin: 120px auto;
+    text-align: center;
+}
+
+h1 {
+    color: #00ffcc;
+}
+
+/* 
+Temporary key: YzNWd1pYSnpaV055WlhRPQ==
+*/
