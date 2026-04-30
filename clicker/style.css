@@ -4,6 +4,7 @@ body {
     justify-content: flex-start;
     align-items: center;
     padding-top: 80px;
+    height: 100vh;
 }
 
 h1 {
