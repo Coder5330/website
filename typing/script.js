@@ -35,7 +35,7 @@ const content = document.getElementById("content");
 const timeEl = document.getElementById("time");
 const wpmEl = document.getElementById("wpm");
 const accEl = document.getElementById("accuracy");
-const message1 = document.getElementBYId("message1");
+const message1 = document.getElementById("message1");
 
 const sentences = [
     "Typing is a skill that improves with patience and consistency. At first, it may feel slow and frustrating, but over time your fingers begin to remember where each key is located. Instead of looking at the keyboard, you learn to trust your muscle memory. The key is to focus on accuracy before speed, because speed naturally increases when mistakes are reduced.",
@@ -51,6 +51,8 @@ let choice = sentences[randint(0, sentences.length - 1)];
 let correct = 0;
 let total = 0;
 let index = 0;
+let wpm = 0;
+let accuracy = 100;
 
 let startTime = null;
 let timer;
@@ -78,8 +80,8 @@ function startTimer() {
     timeEl.textContent = elapsed.toFixed(1);
 
     let minutes = elapsed / 60;
-    let wpm = Math.round((correct / 5) / minutes || 0);
-    let accuracy = Math.round((correct / total) * 100 || 100);
+    wpm = Math.round((correct / 5) / minutes || 0);
+    accuracy = Math.round((correct / total) * 100 || 100);
 
     wpmEl.textContent = wpm;
     accEl.textContent = accuracy;
