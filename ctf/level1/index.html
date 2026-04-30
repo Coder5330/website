@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Log 1</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div class="container">
+  <h1>Restricted Area</h1>
+  <p id="status">Checking credentials...</p>
+</div>
+
+<script>
+  function getCookie(name) {
+    return document.cookie
+      .split(';')
+      .find(c => c.trim().startsWith(name + '='))
+      ?.trim().split('=')[1];
+  }
+
+  const existingToken = getCookie('token');
+
+  if (!existingToken) {
+    document.cookie = "token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiZ3Vlc3QifQ.abc123; path=/";
+  }
+
+  function checkAccess() {
+    const token = getCookie('token');
+
+    if (!token) {
+      document.getElementById('status').innerText = 'No credentials found.';
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+
+      if (payload.role === 'admin') {
+        document.getElementById('status').innerText = 'Access granted. ';
+        fetch('/api/verify', {
+          headers: { 'Authorization': token }
+        })
+        .then(r => r.json())
+        .then(data => { window._d = data; });
+      } else {
+        document.getElementById('status').innerText = 'Access denied. Insufficient privileges.';
+      }
+    } catch {
+      document.getElementById('status').innerText = 'Invalid credentials.';
+    }
+  }
+
+  checkAccess();
+</script>
+</body>
+</html>
