@@ -26,6 +26,7 @@ ul {
   z-index: 100;
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 10px;
   padding: 12px 20px;
   background: rgba(15, 23, 42, 0.85);
@@ -51,6 +52,32 @@ ul {
   background: rgba(0, 245, 255, 0.1);
   border-color: rgba(0, 245, 255, 0.3);
   color: #00f5ff;
+}
+
+/* logout button in menu */
+.menu-logout {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: #475569;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 1px;
+}
+
+.menu-logout:hover {
+  color: #F09595;
+  border-color: rgba(240,149,149,0.3);
+}
+
+.menu-user {
+  font-size: 11px;
+  color: #334155;
+  letter-spacing: 1px;
 }
 
 /* ── Cards ── */
