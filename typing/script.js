@@ -2,6 +2,35 @@ function randint(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function getRank(wpm, accuracy) {
+    if (wpm >= 90 && accuracy >= 97) {
+        return {
+            rank: "Master",
+            message: "Typing legend. That’s elite."
+        };
+    } else if (wpm >= 75 && accuracy >= 96) {
+        return {
+            rank: "Expert",
+            message: "Impressive precision and speed!"
+        };
+    } else if (wpm >= 60 && accuracy >= 95) {
+        return {
+            rank: "Advanced",
+            message: "Great typing—fast and controlled!"
+        };
+    } else if (wpm >= 40 && accuracy >= 90) {
+        return {
+            rank: "Intermediate",
+            message: "Nice! Your speed is building."
+        };
+    } else {
+        return {
+            rank: "Beginner",
+            message: "Keep practicing—you’re getting there!"
+        };
+    }
+}
+
 const content = document.getElementById("content");
 const timeEl = document.getElementById("time");
 const wpmEl = document.getElementById("wpm");
@@ -89,5 +118,9 @@ content.addEventListener("keydown", (e) => {
   if (index === spans.length) {
     clearInterval(timer);
     alert("Finished!");
+    
+    const result = getRank(wpm, accuracy);
+    alert(result.rank);
+    alert(result.message);
   }
 });
