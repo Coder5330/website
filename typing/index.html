@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="../style.css">
+        <link rel="stylesheet" href="style.css">
+    </head>
+
+    <body>
+        <ul class="menu">
+            <li><a href="../index.html">Homepage</a></li>
+            <li><a href="../about/index.html">About</a></li>
+            <li><a href="#">Typing Simulator</a></li>
+            <li><a href="../math_game/index.html">Math Game</a></li>
+            <li><a href="../clicker/index.html">Clicker</a></li>
+          </ul>
+        <h1>Typing Speed Simulator</h1>
+        <p>Start typing to begin game!</p>
+
+        <div id="stats">
+            <span>Time: <span id="time">0.0</span>s</span>
+            <span>WPM: <span id="wpm">0</span></span>
+            <span>Accuracy: <span id="accuracy">100</span>%</span>
+        </div>
+
+        <button id="restart">Restart</button>
+        <div id="wrapper">
+            <div id="content" tabindex="0"></div>
+        </div>
+
+        <script src="script.js"></script>
+    </body>
+</html>
