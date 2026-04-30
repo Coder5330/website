@@ -116,7 +116,7 @@ content.addEventListener("keydown", (e) => {
     const currentSpan = spans[index];
     const offset = currentSpan.offsetTop;
 
-    content.style.transform = `translateY(-${offset - 40}px)`;
+    content.style.transform = `translateY(-${Math.max(0, offset - 40)}px)`;
   }
 
   if (index === spans.length) {
