@@ -9,7 +9,7 @@
    display: block !important;
    height: auto !important;
    justify-content: unset !important;
-   align-items: unset !important;
+   align-items: center !important;
  }
  .header { text-align: center; margin-bottom: 2.5rem; }
  .header .eyebrow { font-size: 11px; color: #00ffcc; letter-spacing: 4px; margin-bottom: 10px; }
