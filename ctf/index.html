@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CTF</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #0a0a0a; color: #e6e6e6; min-height: 100vh; padding: 2.5rem 1.5rem; }
+    .header { text-align: center; margin-bottom: 2.5rem; }
+    .header .eyebrow { font-size: 11px; color: #00ffcc; letter-spacing: 4px; margin-bottom: 10px; }
+    .header h1 { font-size: 28px; font-weight: 500; color: #fff; margin-bottom: 8px; }
+    .header p { font-size: 13px; color: #555; }
+    .progress-wrap { max-width: 480px; margin: 0 auto 2rem; }
+    .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: #555; margin-bottom: 6px; }
+    .progress-bar { height: 3px; background: #1a1a1a; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #00ffcc; border-radius: 2px; transition: width 0.4s ease; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 480px; margin: 0 auto 2.5rem; }
+    .stat { background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 14px 12px; text-align: center; }
+    .stat-val { font-size: 24px; font-weight: 500; color: #00ffcc; }
+    .stat-label { font-size: 11px; color: #555; margin-top: 3px; letter-spacing: 1px; }
+    .levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; max-width: 860px; margin: 0 auto; }
+    .card { background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s; }
+    .card:hover:not(.locked) { border-color: #2a2a2a; }
+    .card.solved { border-color: #0f6e5688; }
+    .card.locked { opacity: 0.4; pointer-events: none; }
+    .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .card-num { font-size: 11px; color: #444; letter-spacing: 2px; }
+    .badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; letter-spacing: 1px; }
+    .badge.easy { background: #04342c; color: #5DCAA5; }
+    .badge.medium { background: #412402; color: #EF9F27; }
+    .badge.hard { background: #501313; color: #F09595; }
+    .badge.locked { background: #1a1a1a; color: #444; }
+    .badge.solved-badge { background: #04342c; color: #5DCAA5; }
+    .card-title { font-size: 15px; font-weight: 500; color: #e0e0e0; margin-bottom: 6px; }
+    .card-desc { font-size: 12px; color: #666; margin-bottom: 14px; line-height: 1.7; }
+    .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 16px; }
+    .tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: #161616; color: #555; border: 0.5px solid #222; }
+    .divider { height: 0.5px; background: #1a1a1a; margin-bottom: 14px; }
+    .open-btn { display: block; width: 100%; background: transparent; border: 0.5px solid #252525; border-radius: 6px; padding: 9px; color: #666; font-family: monospace; font-size: 12px; cursor: pointer; text-align: center; margin-bottom: 10px; letter-spacing: 1px; transition: all 0.15s; }
+    .open-btn:hover { color: #00ffcc; border-color: #00ffcc33; background: #00ffcc08; }
+    .flag-row { display: flex; gap: 8px; }
+    .flag-row input { flex: 1; background: #0d0d0d; border: 0.5px solid #222; border-radius: 6px; padding: 8px 10px; color: #e6e6e6; font-family: monospace; font-size: 12px; outline: none; }
+    .flag-row input:focus { border-color: #00ffcc33; }
+    .flag-row input::placeholder { color: #333; }
+    .flag-row button { background: transparent; border: 0.5px solid #252525; border-radius: 6px; padding: 8px 14px; color: #777; font-family: monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+    .flag-row button:hover { color: #00ffcc; border-color: #00ffcc33; }
+    .msg { font-size: 11px; margin-top: 7px; min-height: 15px; }
+    .msg.err { color: #F09595; }
+    .solved-state { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+    .solved-dot { width: 8px; height: 8px; border-radius: 50%; background: #1D9E75; flex-shrink: 0; }
+    .solved-text { font-size: 12px; color: #5DCAA5; }
+    .solved-pts { margin-left: auto; font-size: 12px; color: #0f6e56; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="eyebrow">CAPTURE THE FLAG</div>
+    <h1>CTF challenges</h1>
+    <p>find the flags hidden in each challenge and submit them below</p>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>progress</span>
+      <span id="progress-text">0 / 2 solved</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="solved-count">0</div><div class="stat-label">SOLVED</div></div>
+    <div class="stat"><div class="stat-val">2</div><div class="stat-label">TOTAL</div></div>
+    <div class="stat"><div class="stat-val" id="pts-count">0</div><div class="stat-label">POINTS</div></div>
+  </div>
+
+  <div style="text-align:center; margin-bottom: 2rem;">
+    <button onclick="resetProgress()" style="background:transparent; border:0.5px solid #1f1f1f; border-radius:6px; padding:6px 14px; color:#444; font-family:monospace; font-size:11px; cursor:pointer; letter-spacing:1px;">reset progress</button>
+  </div>
+
+  <div class="levels">
+
+    <div class="card" id="card-tutorial">
+      <div class="card-top">
+        <span class="card-num">01</span>
+        <span class="badge easy" id="badge-tutorial">easy</span>
+      </div>
+      <div class="card-title">Tutorial</div>
+      <div class="card-desc">Learn the basics. Inspect the page, decode some ciphers, find what's hidden in plain sight.</div>
+      <div class="tags">
+        <span class="tag">source code</span>
+        <span class="tag">base64</span>
+        <span class="tag">caesar</span>
+        <span class="tag">jwt</span>
+      </div>
+      <div class="divider"></div>
+      <button class="open-btn" onclick="window.open('/tutorial/index.html','_blank')">→ open challenge</button>
+      <div id="bottom-tutorial">
+        <div class="flag-row">
+          <input type="text" placeholder="flag{...}" id="input-tutorial">
+          <button onclick="submit('tutorial')">submit</button>
+        </div>
+        <div class="msg" id="msg-tutorial"></div>
+      </div>
+    </div>
+
+    <div class="card" id="card-level1">
+      <div class="card-top">
+        <span class="card-num">02</span>
+        <span class="badge medium" id="badge-level1">medium</span>
+      </div>
+      <div class="card-title">Level 1 — restricted area</div>
+      <div class="card-desc">Access denied. Or is it? Dig into your credentials and watch the network carefully.</div>
+      <div class="tags">
+        <span class="tag">cookies</span>
+        <span class="tag">jwt</span>
+        <span class="tag">network tab</span>
+        <span class="tag">devtools</span>
+      </div>
+      <div class="divider"></div>
+      <button class="open-btn" onclick="window.open('/level1/index.html','_blank')">→ open challenge</button>
+      <div id="bottom-level1">
+        <div class="flag-row">
+          <input type="text" placeholder="flag{...}" id="input-level1">
+          <button onclick="submit('level1')">submit</button>
+        </div>
+        <div class="msg" id="msg-level1"></div>
+      </div>
+    </div>
+
+    <div class="card" id="card-level2">
+      <div class="card-top">
+        <span class="card-num">03</span>
+        <span class="badge hard" id="badge-level2">hard</span>
+      </div>
+      <div class="card-title">Level 2 — diagnostics</div>
+      <div class="card-desc">Everything looks fine. But is it really? Look closer at what the server is telling you.</div>
+      <div class="tags">
+        <span class="tag">http headers</span>
+        <span class="tag">network tab</span>
+        <span class="tag">obfuscated js</span>
+      </div>
+      <div class="divider"></div>
+      <button class="open-btn" onclick="window.open('/level2/index.html','_blank')">→ open challenge</button>
+      <div id="bottom-level2">
+        <div class="flag-row">
+          <input type="text" placeholder="flag{...}" id="input-level2">
+          <button onclick="submit('level2')">submit</button>
+        </div>
+        <div class="msg" id="msg-level2"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const POINTS = { tutorial: 100, level1: 200, level2: 300 };
+    const TOTAL = 3;
+    const solved = JSON.parse(localStorage.getItem('ctf_solved') || '{}');
+
+    function updateStats() {
+      const s = Object.keys(solved).length;
+      const pts = Object.keys(solved).reduce((a, k) => a + (POINTS[k] || 0), 0);
+      document.getElementById('solved-count').textContent = s;
+      document.getElementById('pts-count').textContent = pts;
+      document.getElementById('progress-text').textContent = s + ' / ' + TOTAL + ' solved';
+      document.getElementById('progress-fill').style.width = Math.round((s / TOTAL) * 100) + '%';
+    }
+
+    function markSolved(id) {
+      document.getElementById('card-' + id).classList.add('solved');
+      document.getElementById('badge-' + id).className = 'badge solved-badge';
+      document.getElementById('badge-' + id).textContent = 'solved';
+      document.getElementById('bottom-' + id).innerHTML =
+        '<div class="solved-state"><div class="solved-dot"></div><span class="solved-text">flag captured</span><span class="solved-pts">+' + POINTS[id] + ' pts</span></div>';
+    }
+
+    function resetProgress() {
+      localStorage.removeItem('ctf_solved');
+      location.reload();
+    }
+
+    async function submit(id) {
+      const val = document.getElementById('input-' + id).value.trim();
+      const msg = document.getElementById('msg-' + id);
+      if (!val) return;
+      msg.className = 'msg';
+      msg.textContent = 'checking...';
+      try {
+        const res = await fetch('/api/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ level: id, flag: val })
+        });
+        const data = await res.json();
+        if (data.correct) {
+          solved[id] = true;
+          localStorage.setItem('ctf_solved', JSON.stringify(solved));
+          markSolved(id);
+          updateStats();
+        } else {
+          msg.className = 'msg err';
+          msg.textContent = '✗ incorrect flag';
+        }
+      } catch {
+        msg.className = 'msg err';
+        msg.textContent = 'error reaching server';
+      }
+    }
+
+    Object.keys(solved).forEach(id => markSolved(id));
+    updateStats();
+  </script>
+
+</body>
+</html>
