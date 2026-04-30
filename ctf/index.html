@@ -54,7 +54,7 @@
         <span class="tag">jwt</span>
       </div>
       <div class="divider"></div>
-      <button class="open-btn" onclick="window.open('/ctf/tutorial/index.html','_blank')">→ open challenge</button>
+      <button class="open-btn" onclick="window.open('/tutorial/index.html','_blank')">→ open challenge</button>
       <div id="bottom-tutorial">
         <div class="flag-row">
           <input type="text" placeholder="flag{...}" id="input-tutorial">
@@ -78,7 +78,7 @@
         <span class="tag">devtools</span>
       </div>
       <div class="divider"></div>
-      <button class="open-btn" onclick="window.open('/ctf/level1/index.html','_blank')">→ open challenge</button>
+      <button class="open-btn" onclick="window.open('/level1/index.html','_blank')">→ open challenge</button>
       <div id="bottom-level1">
         <div class="flag-row">
           <input type="text" placeholder="flag{...}" id="input-level1">
@@ -101,7 +101,7 @@
         <span class="tag">obfuscated js</span>
       </div>
       <div class="divider"></div>
-      <button class="open-btn" onclick="window.open('/ctf/level2/index.html','_blank')">→ open challenge</button>
+      <button class="open-btn" onclick="window.open('/level2/index.html','_blank')">→ open challenge</button>
       <div id="bottom-level2">
         <div class="flag-row">
           <input type="text" placeholder="flag{...}" id="input-level2">
@@ -147,7 +147,7 @@
       msg.className = 'msg';
       msg.textContent = 'checking...';
       try {
-        const res = await fetch('/ctf/api/check', {
+        const res = await fetch('/api/check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ level: id, flag: val })
