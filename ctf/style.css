@@ -1,57 +1,57 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: monospace;
-      background: #0a0a0a;
-      color: #e6e6e6;
-      min-height: 100vh;
-      padding: 70px 1.5rem 2.5rem !important;
-      display: block !important;
-      height: auto !important;
-      justify-content: unset !important;
-      align-items: unset !important;
-    }
-    .header { text-align: center; margin-bottom: 2.5rem; }
-    .header .eyebrow { font-size: 11px; color: #00ffcc; letter-spacing: 4px; margin-bottom: 10px; }
-    .header h1 { font-size: 28px; font-weight: 500; color: #fff; margin-bottom: 8px; }
-    .header p { font-size: 13px; color: #555; }
-    .progress-wrap { max-width: 480px; margin: 0 auto 2rem; }
-    .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: #555; margin-bottom: 6px; }
-    .progress-bar { height: 3px; background: #1a1a1a; border-radius: 2px; overflow: hidden; }
-    .progress-fill { height: 100%; background: #00ffcc; border-radius: 2px; transition: width 0.4s ease; }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 480px; margin: 0 auto 2.5rem; }
-    .stat { background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 14px 12px; text-align: center; }
-    .stat-val { font-size: 24px; font-weight: 500; color: #00ffcc; }
-    .stat-label { font-size: 11px; color: #555; margin-top: 3px; letter-spacing: 1px; }
-    .levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; max-width: 860px; margin: 0 auto; }
-    .card { background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s; }
-    .card:hover:not(.locked) { border-color: #2a2a2a; }
-    .card.solved { border-color: #0f6e5688; }
-    .card.locked { opacity: 0.4; pointer-events: none; }
-    .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .card-num { font-size: 11px; color: #444; letter-spacing: 2px; }
-    .badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; letter-spacing: 1px; }
-    .badge.easy { background: #04342c; color: #5DCAA5; }
-    .badge.medium { background: #412402; color: #EF9F27; }
-    .badge.hard { background: #501313; color: #F09595; }
-    .badge.locked { background: #1a1a1a; color: #444; }
-    .badge.solved-badge { background: #04342c; color: #5DCAA5; }
-    .card-title { font-size: 15px; font-weight: 500; color: #e0e0e0; margin-bottom: 6px; }
-    .card-desc { font-size: 12px; color: #666; margin-bottom: 14px; line-height: 1.7; }
-    .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 16px; }
-    .tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: #161616; color: #555; border: 0.5px solid #222; }
-    .divider { height: 0.5px; background: #1a1a1a; margin-bottom: 14px; }
-    .open-btn { display: block; width: 100%; background: transparent; border: 0.5px solid #252525; border-radius: 6px; padding: 9px; color: #666; font-family: monospace; font-size: 12px; cursor: pointer; text-align: center; margin-bottom: 10px; letter-spacing: 1px; transition: all 0.15s; }
-    .open-btn:hover { color: #00ffcc; border-color: #00ffcc33; background: #00ffcc08; }
-    .flag-row { display: flex; gap: 8px; }
-    .flag-row input { flex: 1; background: #0d0d0d; border: 0.5px solid #222; border-radius: 6px; padding: 8px 10px; color: #e6e6e6; font-family: monospace; font-size: 12px; outline: none; }
-    .flag-row input:focus { border-color: #00ffcc33; }
-    .flag-row input::placeholder { color: #333; }
-    .flag-row button { background: transparent; border: 0.5px solid #252525; border-radius: 6px; padding: 8px 14px; color: #777; font-family: monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; }
-    .flag-row button:hover { color: #00ffcc; border-color: #00ffcc33; }
-    .msg { font-size: 11px; margin-top: 7px; min-height: 15px; }
-    .msg.err { color: #F09595; }
-    .solved-state { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
-    .solved-dot { width: 8px; height: 8px; border-radius: 50%; background: #1D9E75; flex-shrink: 0; }
-    .solved-text { font-size: 12px; color: #5DCAA5; }
-    .solved-pts { margin-left: auto; font-size: 12px; color: #0f6e56; }
+ * { box-sizing: border-box; margin: 0; padding: 0; }
+ body {
+   font-family: monospace;
+   background: #0a0a0a;
+   color: #e6e6e6;
+   min-height: 100vh;
+   padding: 70px 1.5rem 2.5rem !important;
+   display: block !important;
+   height: auto !important;
+   justify-content: unset !important;
+   align-items: unset !important;
+ }
+ .header { text-align: center; margin-bottom: 2.5rem; }
+ .header .eyebrow { font-size: 11px; color: #00ffcc; letter-spacing: 4px; margin-bottom: 10px; }
+ .header h1 { font-size: 28px; font-weight: 500; color: #fff; margin-bottom: 8px; }
+ .header p { font-size: 13px; color: #555; }
+ .progress-wrap { max-width: 480px; margin: 0 auto 2rem; }
+ .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: #555; margin-bottom: 6px; }
+ .progress-bar { height: 3px; background: #1a1a1a; border-radius: 2px; overflow: hidden; }
+ .progress-fill { height: 100%; background: #00ffcc; border-radius: 2px; transition: width 0.4s ease; }
+ .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 480px; margin: 0 auto 2.5rem; }
+ .stat { background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 14px 12px; text-align: center; }
+ .stat-val { font-size: 24px; font-weight: 500; color: #00ffcc; }
+ .stat-label { font-size: 11px; color: #555; margin-top: 3px; letter-spacing: 1px; }
+ .levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; max-width: 860px; margin: 0 auto; }
+ .card { background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s; }
+ .card:hover:not(.locked) { border-color: #2a2a2a; }
+ .card.solved { border-color: #0f6e5688; }
+ .card.locked { opacity: 0.4; pointer-events: none; }
+ .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+ .card-num { font-size: 11px; color: #444; letter-spacing: 2px; }
+ .badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; letter-spacing: 1px; }
+ .badge.easy { background: #04342c; color: #5DCAA5; }
+ .badge.medium { background: #412402; color: #EF9F27; }
+ .badge.hard { background: #501313; color: #F09595; }
+ .badge.locked { background: #1a1a1a; color: #444; }
+ .badge.solved-badge { background: #04342c; color: #5DCAA5; }
+ .card-title { font-size: 15px; font-weight: 500; color: #e0e0e0; margin-bottom: 6px; }
+ .card-desc { font-size: 12px; color: #666; margin-bottom: 14px; line-height: 1.7; }
+ .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 16px; }
+ .tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: #161616; color: #555; border: 0.5px solid #222; }
+ .divider { height: 0.5px; background: #1a1a1a; margin-bottom: 14px; }
+ .open-btn { display: block; width: 100%; background: transparent; border: 0.5px solid #252525; border-radius: 6px; padding: 9px; color: #666; font-family: monospace; font-size: 12px; cursor: pointer; text-align: center; margin-bottom: 10px; letter-spacing: 1px; transition: all 0.15s; }
+ .open-btn:hover { color: #00ffcc; border-color: #00ffcc33; background: #00ffcc08; }
+ .flag-row { display: flex; gap: 8px; }
+ .flag-row input { flex: 1; background: #0d0d0d; border: 0.5px solid #222; border-radius: 6px; padding: 8px 10px; color: #e6e6e6; font-family: monospace; font-size: 12px; outline: none; }
+ .flag-row input:focus { border-color: #00ffcc33; }
+ .flag-row input::placeholder { color: #333; }
+ .flag-row button { background: transparent; border: 0.5px solid #252525; border-radius: 6px; padding: 8px 14px; color: #777; font-family: monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+ .flag-row button:hover { color: #00ffcc; border-color: #00ffcc33; }
+ .msg { font-size: 11px; margin-top: 7px; min-height: 15px; }
+ .msg.err { color: #F09595; }
+ .solved-state { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+ .solved-dot { width: 8px; height: 8px; border-radius: 50%; background: #1D9E75; flex-shrink: 0; }
+ .solved-text { font-size: 12px; color: #5DCAA5; }
+ .solved-pts { margin-left: auto; font-size: 12px; color: #0f6e56; }
