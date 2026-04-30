@@ -35,6 +35,7 @@ const content = document.getElementById("content");
 const timeEl = document.getElementById("time");
 const wpmEl = document.getElementById("wpm");
 const accEl = document.getElementById("accuracy");
+const message1 = document.getElementBYId("message1");
 
 const sentences = [
     "Typing is a skill that improves with patience and consistency. At first, it may feel slow and frustrating, but over time your fingers begin to remember where each key is located. Instead of looking at the keyboard, you learn to trust your muscle memory. The key is to focus on accuracy before speed, because speed naturally increases when mistakes are reduced.",
@@ -87,6 +88,7 @@ function startTimer() {
 
 content.addEventListener("keydown", (e) => {
   if (!startTime) {
+    message1.textContent = "Test started!";
     startTime = Date.now();
     startTimer();
   }
@@ -117,10 +119,13 @@ content.addEventListener("keydown", (e) => {
 
   if (index === spans.length) {
     clearInterval(timer);
-    alert("Finished!");
+    message1.textContent = "Test finished!";
     
     const result = getRank(wpm, accuracy);
-    alert(result.rank);
-    alert(result.message);
+    const rank = document.getElementById("rank");
+    const message2 = document.getElementById("message2");
+    
+    rank.textContent = "Your rank: " + result.rank;
+    message2.textContent = result.message
   }
 });
