@@ -4,17 +4,19 @@
   <title>CTF</title>
   <link rel="stylesheet" href="../style.css">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <ul class="menu">
-      <li><a href="../index.html">Homepage</a></li>
-      <li><a href="../about/index.html">About</a></li>
-      <li><a href="../typing/index.html">Typing Simulator</a></li>
-      <li><a href="../math_game/index.html">Math Game</a></li>
-      <li><a href="../clicker/index.html">Cookie Clicker</a></li>
-      <li><a href="#">CTF</a></li>
-      <li><a href="../cps/index.html">CPS</a></li>
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="../about/index.html">About</a></li>
+    <li><a href="../typing/index.html">Typing</a></li>
+    <li><a href="../math_game/index.html">Math</a></li>
+    <li><a href="../clicker/index.html">Clicker</a></li>
+    <li><a href="../cps/index.html">CPS</a></li>
+    <li><a href="#" class="active">CTF</a></li>
   </ul>
+
   <div class="header">
     <div class="eyebrow">CAPTURE THE FLAG</div>
     <h1>CTF challenges</h1>
@@ -24,19 +26,15 @@
   <div class="progress-wrap">
     <div class="progress-label">
       <span>progress</span>
-      <span id="progress-text">0 / 2 solved</span>
+      <span id="progress-text">0 / 3 solved</span>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
   </div>
 
   <div class="stats">
     <div class="stat"><div class="stat-val" id="solved-count">0</div><div class="stat-label">SOLVED</div></div>
-    <div class="stat"><div class="stat-val">2</div><div class="stat-label">TOTAL</div></div>
+    <div class="stat"><div class="stat-val">3</div><div class="stat-label">TOTAL</div></div>
     <div class="stat"><div class="stat-val" id="pts-count">0</div><div class="stat-label">POINTS</div></div>
-  </div>
-
-  <div style="text-align:center; margin-bottom: 2rem;">
-    <button onclick="resetProgress()" style="background:transparent; border:0.5px solid #1f1f1f; border-radius:6px; padding:6px 14px; color:#444; font-family:monospace; font-size:11px; cursor:pointer; letter-spacing:1px;">reset progress</button>
   </div>
 
   <div class="levels">
@@ -114,10 +112,18 @@
 
   </div>
 
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
   <script>
     const POINTS = { tutorial: 100, level1: 200, level2: 300 };
     const TOTAL = 3;
-    const solved = JSON.parse(localStorage.getItem('ctf_solved') || '{}');
+    let solved = {};
+
+    async function getToken() {
+      const { data: { session } } = await sb.auth.getSession();
+      return session?.access_token;
+    }
 
     function updateStats() {
       const s = Object.keys(solved).length;
@@ -136,9 +142,15 @@
         '<div class="solved-state"><div class="solved-dot"></div><span class="solved-text">flag captured</span><span class="solved-pts">+' + POINTS[id] + ' pts</span></div>';
     }
 
-    function resetProgress() {
-      localStorage.removeItem('ctf_solved');
-      location.reload();
+    async function loadProgress() {
+      const token = await getToken();
+      const res = await fetch('/api/ctf-progress', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = await res.json();
+      solved = data.solved || {};
+      Object.keys(solved).forEach(id => markSolved(id));
+      updateStats();
     }
 
     async function submit(id) {
@@ -147,16 +159,20 @@
       if (!val) return;
       msg.className = 'msg';
       msg.textContent = 'checking...';
+
+      const token = await getToken();
       try {
         const res = await fetch('/api/check', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
           body: JSON.stringify({ level: id, flag: val })
         });
         const data = await res.json();
         if (data.correct) {
           solved[id] = true;
-          localStorage.setItem('ctf_solved', JSON.stringify(solved));
           markSolved(id);
           updateStats();
         } else {
@@ -169,9 +185,7 @@
       }
     }
 
-    Object.keys(solved).forEach(id => markSolved(id));
-    updateStats();
+    loadProgress();
   </script>
-
 </body>
 </html>
