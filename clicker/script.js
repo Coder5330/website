@@ -23,7 +23,6 @@ function formatNumber(num) {
 function updateButtons() {
     upgrades.forEach(up => {
         const button = document.getElementById(up.id);
-
         if (score < up.cost) {
             button.style.background = "grey";
         } else {
@@ -32,27 +31,53 @@ function updateButtons() {
     });
 }
 
+// --- Tamper detection via checksum ---
+const SAVE_SECRET = "c00k13_s3cr3t_k3y_x9z";
+
+function checksum(score, gpc, gps) {
+    const raw = `${Math.floor(score)}:${Math.floor(gpc)}:${Math.floor(gps)}:${SAVE_SECRET}`;
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+        hash = (Math.imul(31, hash) + raw.charCodeAt(i)) | 0;
+    }
+    return hash.toString(16);
+}
+
 function saveGame() {
-    localStorage.setItem('score', score);
-    localStorage.setItem('gpc', gpc);
-    localStorage.setItem('gps', gps);
+    const s = Math.floor(score);
+    const c = Math.floor(gpc);
+    const g = Math.floor(gps);
+    localStorage.setItem('score', s);
+    localStorage.setItem('gpc', c);
+    localStorage.setItem('gps', g);
+    localStorage.setItem('chk', checksum(s, c, g));
 }
 
 function loadGame() {
-    score = parseFloat(localStorage.getItem('score')) || 0;
-    gpc = parseFloat(localStorage.getItem('gpc')) || 1;
-    gps = parseFloat(localStorage.getItem('gps')) || 0;
+    const s = parseFloat(localStorage.getItem('score')) || 0;
+    const c = parseFloat(localStorage.getItem('gpc')) || 1;
+    const g = parseFloat(localStorage.getItem('gps')) || 0;
+    const savedChk = localStorage.getItem('chk');
+
+    if (savedChk !== null && savedChk !== checksum(s, c, g)) {
+        // Tampered — reset to zero
+        console.warn("Save data tampered. Resetting.");
+        localStorage.clear();
+        score = 0; gpc = 1; gps = 0;
+    } else {
+        score = s; gpc = c; gps = g;
+    }
     updateDisplay();
 }
 
-
+// --- Game state ---
 let score = 0;
 let gps = 0;
 let gpc = 1;
 const scoreDisplay = document.getElementById('score');
 const gpcDisplay = document.getElementById('gpc');
 const gpsDisplay = document.getElementById('gps');
-const cookie = document.getElementById('cookie')
+const cookie = document.getElementById('cookie');
 
 const upgrades = [
     { id: 'up1',  type: 'gps', value: 0.25,    cost: 25 },
@@ -78,7 +103,7 @@ loadGame();
 cookie.addEventListener("click", () => {
     score += gpc;
     updateDisplay();
-})
+});
 
 cookie.addEventListener("click", (e) => {
     const popup = document.createElement("div");
@@ -120,7 +145,7 @@ cookie.addEventListener("click", (e) => {
         let opacity = 1;
 
         const fall = setInterval(() => {
-            velY += 0.5; // gravity
+            velY += 0.5;
             posX += dx * 0.05;
             posY += velY;
             opacity -= 0.03;
@@ -137,18 +162,15 @@ cookie.addEventListener("click", (e) => {
 
 upgrades.forEach(up => {
     const button = document.getElementById(up.id);
-
     button.addEventListener("click", () => {
         if (score >= up.cost) {
-        score -= up.cost;
-
-        if (up.type === "gps") {
-            gps += up.value;
-        } else {
-            gpc += up.value;
-        }
-
-        updateDisplay();
+            score -= up.cost;
+            if (up.type === "gps") {
+                gps += up.value;
+            } else {
+                gpc += up.value;
+            }
+            updateDisplay();
         }
     });
 });
