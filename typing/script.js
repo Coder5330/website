@@ -134,5 +134,28 @@ content.addEventListener("keydown", (e) => {
     const result = getRank(wpm, accuracy);
     document.getElementById("rank").textContent = "Your rank: " + result.rank;
     document.getElementById("message2").textContent = result.message;
+    saveTypingScore();
   }
 });
+
+async function saveTypingScore() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data } = await sb.from('scores')
+    .select('payload')
+    .eq('player_id', session.user.id)
+    .eq('game', 'typing')
+    .maybeSingle();
+  if (data?.payload?.wpm >= wpm) return;
+  const status = document.getElementById('save-status');
+  status.textContent = '⬤ saving...';
+  status.className = 'saving';
+  const { error } = await sb.from('scores').upsert({
+    player_id: session.user.id,
+    game: 'typing',
+    payload: { wpm, accuracy }
+  }, { onConflict: 'player_id,game' });
+  if (error) { console.error('save error:', error); status.textContent = '⬤ error'; status.className = ''; return; }
+  status.textContent = '⬤ new best!';
+  status.className = 'saved';
+}

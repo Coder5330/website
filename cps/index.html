@@ -18,7 +18,7 @@
         <div class="box">
             <h1>CPS Test</h1>
             <p>How fast can you click?</p>
-            <div>
+            <div id="cps-stats">
                 <p id="timer">Timer: 0</p>
                 <p id="cps">CPS: 0</p>
                 <p id="clicks">Clicks: 0</p>
@@ -26,6 +26,7 @@
             <div id="canvas">
                 <p>Start clicking to start test...</p>
             </div>
+            <span id="save-status"></span>
         </div>
 
         <div class="box">
@@ -40,10 +41,10 @@
                 <li><button id="s100">100 seconds</button></li>   
             </ul>
         </div>
-        <script src="script.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
         <script src="../supabase.js"></script>
         <script src="../auth-guard.js"></script>
         <script src="../menu.js"></script>
+        <script src="script.js"></script>
     </body>
 </html>

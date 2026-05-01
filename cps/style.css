@@ -6,17 +6,19 @@
     color: grey;
 }
 
-div {
+.box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: flex-start;
+    margin-top: 70px;
+}
+
+#cps-stats {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 30px;
-}
-
-.box {
-    flex-direction: column;
-    align-self: flex-start;
-    margin-top: 70px;
 }
 
 body {
@@ -26,7 +28,7 @@ body {
     justify-content: center;
 }
 
-button {
+.box button {
     text-decoration: none;
     color: inherit;
     background-color: yellowgreen;
@@ -38,12 +40,12 @@ button {
     margin: 5px;
 }
 
-button:hover {
+.box button:hover {
     background-color: rgba(154, 205, 50, 0.75);
     border-color: rgba(255, 0, 0, 0.75);
 }
 
-button.chosen {
+.box button.chosen {
     background-color: #1a1a2e;
     border-color: yellowgreen;
     color: yellowgreen;
