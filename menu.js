@@ -7,10 +7,10 @@
 
   const menu = document.querySelector('.menu');
 
-  const userLi = document.createElement('li');
-  userLi.innerHTML = `<span class="menu-user">${user.email}</span>`;
+  const right = document.createElement('div');
+  right.className = 'menu-right';
+  right.innerHTML = `<span class="menu-user">${user.email}</span>`;
 
-  const logoutLi = document.createElement('li');
   const logoutBtn = document.createElement('button');
   logoutBtn.className = 'menu-logout';
   logoutBtn.textContent = 'logout';
@@ -18,8 +18,6 @@
     await sb.auth.signOut();
     window.location.href = '/auth/index.html';
   };
-  logoutLi.appendChild(logoutBtn);
-
-  menu.appendChild(userLi);
-  menu.appendChild(logoutLi);
+  right.appendChild(logoutBtn);
+  menu.appendChild(right);
 })();

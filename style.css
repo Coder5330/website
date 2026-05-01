@@ -62,9 +62,19 @@ ul {
   color: #00f5ff;
 }
 
-/* logout button in menu */
+/* right-side user info — absolutely positioned so it never shifts nav items */
+.menu-right {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
 .menu-logout {
-  margin-left: auto;
   background: transparent;
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px;
@@ -87,6 +97,17 @@ ul {
   color: #334155;
   letter-spacing: 1px;
 }
+
+/* save status indicator (used on game pages) */
+#save-status {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #334155;
+  margin-top: 8px;
+  transition: color 0.3s;
+}
+#save-status.saving { color: #64748b; }
+#save-status.saved  { color: #34d399; }
 
 /* ── Cards ── */
 .card-grid {

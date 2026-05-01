@@ -28,6 +28,31 @@ buttons.forEach(btn => {
     });
 });
 
+async function saveCpsScore(cpsValue, duration) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data } = await sb.from('scores')
+    .select('payload')
+    .eq('player_id', session.user.id)
+    .eq('game', 'cps')
+    .maybeSingle();
+  const existing = data?.payload || {};
+  const key = 'd' + duration;
+  if (existing[key] && cpsValue <= existing[key]) return;
+  existing[key] = parseFloat(cpsValue.toFixed(2));
+  const status = document.getElementById('save-status');
+  status.textContent = '⬤ saving...';
+  status.className = 'saving';
+  const { error } = await sb.from('scores').upsert({
+    player_id: session.user.id,
+    game: 'cps',
+    payload: existing
+  }, { onConflict: 'player_id,game' });
+  if (error) { console.error('save error:', error); status.textContent = '⬤ error'; status.className = ''; return; }
+  status.textContent = '⬤ new best!';
+  status.className = 'saved';
+}
+
 canvas.addEventListener("click", () => {
     if (timer === null) {
         startTime = Date.now();
@@ -41,7 +66,9 @@ canvas.addEventListener("click", () => {
 
             if (elapsed >= DURATION) {
                 clearInterval(timer);
-                canvas.querySelector("p").textContent = "Done! " + (clickCount / DURATION).toFixed(2) + " CPS";
+                const finalCps = clickCount / DURATION;
+                canvas.querySelector("p").textContent = "Done! " + finalCps.toFixed(2) + " CPS";
+                saveCpsScore(finalCps, DURATION);
             }
         }, 10);
     }
