@@ -184,8 +184,8 @@ async function _openDelete(user) {
     <div class="dd-item dd-danger" data-a="delete">Delete account</div>`;
 
   right.appendChild(avatar);
-  right.appendChild(dropdown);
   menu.appendChild(right);
+  document.body.appendChild(dropdown);
 
   let dropOpen = false;
 

@@ -71,21 +71,30 @@ ul {
 }
 
 .menu-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: unset !important;
+  min-height: unset !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  border: none !important;
+  box-shadow: none !important;
+  background-clip: padding-box;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
   cursor: pointer;
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
   transition: opacity 0.15s, transform 0.15s;
+  flex-shrink: 0;
 }
-.menu-avatar:hover { opacity: 0.85; transform: scale(1.08); }
+.menu-avatar:hover { opacity: 0.85; transform: scale(1.08) !important; }
 
 .menu-dropdown {
   position: fixed;
