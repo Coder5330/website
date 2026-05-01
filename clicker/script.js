@@ -54,9 +54,36 @@ function updateButtons() {
   });
 }
 
+let cachedToken = null;
+
 async function getToken() {
   const { data: { session } } = await sb.auth.getSession();
-  return session?.access_token;
+  cachedToken = session?.access_token || null;
+  return cachedToken;
+}
+
+function buildPayload() {
+  return JSON.stringify({
+    game: 'clicker',
+    payload: {
+      score: Math.floor(score),
+      gpc: Math.floor(gpc),
+      gps: Math.floor(gps),
+      gpsm: gpsMultiplier,
+      pm: [...purchasedMults],
+      bc: buyCounts
+    }
+  });
+}
+
+function saveGameSync() {
+  if (!cachedToken) return;
+  fetch('/api/scores', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cachedToken },
+    body: buildPayload(),
+    keepalive: true
+  });
 }
 
 async function saveGame() {
@@ -67,26 +94,18 @@ async function saveGame() {
   status.className = 'saving';
   await fetch('/api/scores', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
-    },
-    body: JSON.stringify({
-      game: 'clicker',
-      payload: {
-        score: Math.floor(score),
-        gpc: Math.floor(gpc),
-        gps: Math.floor(gps),
-        gpsm: gpsMultiplier,
-        pm: [...purchasedMults],
-        bc: buyCounts
-      }
-    })
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: buildPayload()
   });
   status.textContent = '⬤ saved';
   status.className = 'saved';
   setTimeout(() => { status.textContent = '⬤ saved'; status.className = ''; }, 2000);
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveGameSync();
+});
+window.addEventListener('pagehide', saveGameSync);
 
 async function loadGame() {
   const token = await getToken();
