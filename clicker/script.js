@@ -264,4 +264,4 @@ upgrades.forEach(up => {
 
 setInterval(() => { score += (gps * gpsMultiplier) / 60; }, 1000 / 60);
 setInterval(updateDisplay, 100);
-setInterval(() => { if (gameLoaded) saveGame(); }, 5000);
+setInterval(() => { if (gameLoaded) saveGame(); }, 1000);
