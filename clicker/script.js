@@ -55,6 +55,7 @@ function updateButtons() {
 }
 
 let cachedToken = null;
+let gameLoaded = false;
 
 async function getToken() {
   const { data: { session } } = await sb.auth.getSession();
@@ -77,7 +78,7 @@ function buildPayload() {
 }
 
 function saveGameSync() {
-  if (!cachedToken) return;
+  if (!cachedToken || !gameLoaded) return;
   fetch('/api/scores', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cachedToken },
@@ -131,6 +132,7 @@ async function loadGame() {
       }
     });
   }
+  gameLoaded = true;
   updateDisplay();
 }
 
@@ -247,4 +249,4 @@ upgrades.forEach(up => {
 
 setInterval(() => { score += (gps * gpsMultiplier) / 60; }, 1000 / 60);
 setInterval(updateDisplay, 100);
-setInterval(saveGame, 5000);
+setInterval(() => { if (gameLoaded) saveGame(); }, 5000);
