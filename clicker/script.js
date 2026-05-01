@@ -1,5 +1,10 @@
 // Clicker script with Supabase save/load
 
+function getEffectiveCost(up) {
+  const n = buyCounts[up.id] || 0;
+  return Math.ceil(up.cost * Math.pow(1.15, n));
+}
+
 function updateDisplay() {
   scoreDisplay.textContent = formatNumber(Math.floor(score));
   gpcDisplay.textContent = formatNumber(Math.floor(gpc));
@@ -25,13 +30,19 @@ function formatNumber(num) {
 function updateButtons() {
   upgrades.forEach(up => {
     const button = document.getElementById(up.id);
+
     if (up.type === 'gpsMulti' && purchasedMults.has(up.id)) {
       button.disabled = true;
       button.classList.remove('affordable');
       button.classList.add('unaffordable');
       return;
     }
-    if (score >= up.cost) {
+
+    const cost = up.type === 'gpsMulti' ? up.cost : getEffectiveCost(up);
+    const costEl = button.querySelectorAll('p')[1];
+    if (costEl) costEl.textContent = 'Cost: ' + formatNumber(Math.ceil(cost));
+
+    if (score >= cost) {
       button.classList.add('affordable');
       button.classList.remove('unaffordable');
     } else {
@@ -62,7 +73,8 @@ async function saveGame() {
         gpc: Math.floor(gpc),
         gps: Math.floor(gps),
         gpsm: gpsMultiplier,
-        pm: [...purchasedMults]
+        pm: [...purchasedMults],
+        bc: buyCounts
       }
     })
   });
@@ -76,10 +88,11 @@ async function loadGame() {
   });
   const { data } = await res.json();
   if (data?.payload) {
-    score        = data.payload.score || 0;
-    gpc          = data.payload.gpc   || 1;
-    gps          = data.payload.gps   || 0;
+    score         = data.payload.score || 0;
+    gpc           = data.payload.gpc   || 1;
+    gps           = data.payload.gps   || 0;
     gpsMultiplier = data.payload.gpsm  || 1;
+    Object.assign(buyCounts, data.payload.bc || {});
     (data.payload.pm || []).forEach(id => {
       purchasedMults.add(id);
       const btn = document.getElementById(id);
@@ -94,6 +107,7 @@ let gps = 0;
 let gpc = 1;
 let gpsMultiplier = 1;
 const purchasedMults = new Set();
+const buyCounts = {};
 
 const scoreDisplay = document.getElementById('score');
 const gpcDisplay   = document.getElementById('gpc');
@@ -127,7 +141,7 @@ const upgrades = [
   { id: 'up22', type: 'gpc', value: 20e9,         cost: 125e12 },
   { id: 'up23', type: 'gps', value: 10e9,         cost: 625e12 },
   { id: 'up24', type: 'gpc', value: 200e9,        cost: 3e15 },
-  // ── GPS multipliers (one-time only) ───────────────────────
+  // ── GPS multipliers (one-time only, no scaling) ───────────
   { id: 'up25', type: 'gpsMulti', value: 2,       cost: 20e15 },
   { id: 'up26', type: 'gpsMulti', value: 5,       cost: 200e15 },
   { id: 'up27', type: 'gpsMulti', value: 10,      cost: 2.5e18 },
@@ -179,12 +193,15 @@ upgrades.forEach(up => {
   const button = document.getElementById(up.id);
   button.addEventListener("click", () => {
     if (up.type === 'gpsMulti' && purchasedMults.has(up.id)) return;
-    if (score < up.cost) return;
-    score -= up.cost;
+    const cost = up.type === 'gpsMulti' ? up.cost : getEffectiveCost(up);
+    if (score < cost) return;
+    score -= cost;
     if (up.type === 'gps') {
       gps += up.value;
+      buyCounts[up.id] = (buyCounts[up.id] || 0) + 1;
     } else if (up.type === 'gpc') {
       gpc += up.value;
+      buyCounts[up.id] = (buyCounts[up.id] || 0) + 1;
     } else if (up.type === 'gpsMulti') {
       gpsMultiplier *= up.value;
       purchasedMults.add(up.id);
