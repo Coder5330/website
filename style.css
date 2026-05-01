@@ -25,6 +25,7 @@ ul {
   right: 0;
   z-index: 100;
   display: flex;
+  flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
   gap: 10px;
@@ -34,7 +35,12 @@ ul {
   border-bottom: 1px solid rgba(255,255,255,0.05);
   transform: translateZ(0);
   will-change: transform;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+
+.menu::-webkit-scrollbar { display: none; }
 
 .menu li a {
   text-decoration: none;
