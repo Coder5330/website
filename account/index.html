@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <ul class="menu">
+        <li><a href="../index.html">Homepage</a></li>
+        <li><a href="../about/index.html">About</a></li>
+        <li><a href="../typing/index.html">Typing Simulator</a></li>
+        <li><a href="../math_game/index.html">Math Game</a></li>
+        <li><a href="../clicker/index.html">Cookie Clicker</a></li>
+        <li><a href="../ctf/index.html">CTF</a></li>
+        <li><a href="../cps/index.html">CPS</a></li>
+    </ul>
+
+    <div class="account-wrap">
+        <div class="account-tabs">
+            <button class="tab-btn" data-tab="profile">Profile</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
+            <button class="tab-btn" data-tab="delete">Delete account</button>
+        </div>
+
+        <div id="tab-profile" class="tab-content">
+            <p class="muted">Loading…</p>
+        </div>
+        <div id="tab-settings" class="tab-content"></div>
+        <div id="tab-delete" class="tab-content"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase.js"></script>
+    <script src="../auth-guard.js"></script>
+    <script src="../menu.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
