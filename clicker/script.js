@@ -25,7 +25,13 @@ function formatNumber(num) {
 function updateButtons() {
   upgrades.forEach(up => {
     const button = document.getElementById(up.id);
-    button.style.background = score < up.cost ? "grey" : "blue";
+    if (score >= up.cost) {
+      button.classList.add('affordable');
+      button.classList.remove('unaffordable');
+    } else {
+      button.classList.add('unaffordable');
+      button.classList.remove('affordable');
+    }
   });
 }
 
@@ -132,11 +138,14 @@ cookie.addEventListener("click", (e) => {
 });
 
 upgrades.forEach(up => {
-  document.getElementById(up.id).addEventListener("click", () => {
+  const button = document.getElementById(up.id);
+  button.addEventListener("click", () => {
     if (score >= up.cost) {
       score -= up.cost;
       if (up.type === "gps") gps += up.value;
       else gpc += up.value;
+      button.classList.add('purchased');
+      setTimeout(() => button.classList.remove('purchased'), 400);
       updateDisplay();
     }
   });
