@@ -7,6 +7,10 @@ body {
     height: 100vh;
 }
 
+#cookie img {
+  pointer-events: none;
+}
+
 h1 {
     font-size: 18px;
 }
