@@ -54,17 +54,18 @@ function updateButtons() {
   });
 }
 
-let cachedToken = null;
+let cachedSession = null;
 let gameLoaded = false;
 
-async function getToken() {
+async function getSession() {
   const { data: { session } } = await sb.auth.getSession();
-  cachedToken = session?.access_token || null;
-  return cachedToken;
+  cachedSession = session;
+  return session;
 }
 
-function buildPayload() {
-  return JSON.stringify({
+function buildRow(session) {
+  return {
+    player_id: session.user.id,
     game: 'clicker',
     payload: {
       score: Math.floor(score),
@@ -74,30 +75,37 @@ function buildPayload() {
       pm: [...purchasedMults],
       bc: buyCounts
     }
-  });
+  };
 }
 
 function saveGameSync() {
-  if (!cachedToken || !gameLoaded) return;
-  fetch('/api/scores', {
+  if (!cachedSession || !gameLoaded) return;
+  fetch(`${SUPABASE_URL}/rest/v1/scores`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cachedToken },
-    body: buildPayload(),
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON,
+      'Authorization': 'Bearer ' + cachedSession.access_token,
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify(buildRow(cachedSession)),
     keepalive: true
   });
 }
 
 async function saveGame() {
-  const token = await getToken();
-  if (!token) return;
+  const session = await getSession();
+  if (!session) return;
   const status = document.getElementById('save-status');
   status.textContent = '⬤ saving...';
   status.className = 'saving';
-  await fetch('/api/scores', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: buildPayload()
-  });
+  const { error } = await sb.from('scores').upsert(buildRow(session), { onConflict: 'player_id,game' });
+  if (error) {
+    status.textContent = '⬤ error';
+    status.className = '';
+    console.error('save error:', error);
+    return;
+  }
   status.textContent = '⬤ saved';
   status.className = 'saved';
   setTimeout(() => { status.textContent = '⬤ saved'; status.className = ''; }, 2000);
@@ -109,12 +117,19 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', saveGameSync);
 
 async function loadGame() {
-  const token = await getToken();
-  if (!token) return;
-  const res = await fetch('/api/scores?game=clicker', {
-    headers: { 'Authorization': 'Bearer ' + token }
-  });
-  const { data } = await res.json();
+  const session = await getSession();
+  if (!session) return;
+  const { data, error } = await sb.from('scores')
+    .select('payload')
+    .eq('player_id', session.user.id)
+    .eq('game', 'clicker')
+    .maybeSingle();
+  if (error) {
+    console.error('load error:', error);
+    gameLoaded = true;
+    updateDisplay();
+    return;
+  }
   if (data?.payload) {
     score         = data.payload.score || 0;
     gpc           = data.payload.gpc   || 1;
