@@ -54,8 +54,10 @@ button {
   user-select: none;
 }
 
-#cookie:hover {
+@media (hover: hover) {
+  #cookie:hover {
     animation: pulse 0.6s 2;
+  }
 }
 
 @keyframes pulse {
