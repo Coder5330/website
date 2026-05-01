@@ -29,28 +29,18 @@ buttons.forEach(btn => {
 });
 
 async function saveCpsScore(cpsValue, duration) {
-  if (!canSaveScore()) return; // Block save if bot suspected
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return;
-  const { data } = await sb.from('scores')
-    .select('payload')
-    .eq('player_id', session.user.id)
-    .eq('game', 'cps')
-    .maybeSingle();
-  const existing = data?.payload || {};
-  const key = 'd' + duration;
-  if (existing[key] && cpsValue <= existing[key]) return;
-  existing[key] = parseFloat(cpsValue.toFixed(2));
   const status = document.getElementById('save-status');
   status.textContent = '⬤ saving...';
   status.className = 'saving';
-  const { error } = await sb.from('scores').upsert({
-    player_id: session.user.id,
-    game: 'cps',
-    payload: existing
-  }, { onConflict: 'player_id,game' });
+  const { error } = await sb.rpc('save_cps_score', {
+    p_player_id: session.user.id,
+    p_duration: duration,
+    p_cps: parseFloat(cpsValue.toFixed(2))
+  });
   if (error) { console.error('save error:', error); status.textContent = '⬤ error'; status.className = ''; return; }
-  status.textContent = '⬤ new best!';
+  status.textContent = '⬤ saved';
   status.className = 'saved';
 }
 
@@ -75,7 +65,6 @@ canvas.addEventListener("click", () => {
     }
 
     if (timer && (Date.now() - startTime) / 1000 < DURATION) {
-        if (recordClick()) return; // Bot detected — block click
         clickCount++;
         clicks.textContent = "Clicks: " + clickCount;
     }
