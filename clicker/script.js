@@ -3,7 +3,7 @@
 function updateDisplay() {
   scoreDisplay.textContent = formatNumber(Math.floor(score));
   gpcDisplay.textContent = formatNumber(Math.floor(gpc));
-  gpsDisplay.textContent = formatNumber(Math.floor(gps));
+  gpsDisplay.textContent = formatNumber(Math.floor(gps * gpsMultiplier));
   updateButtons();
 }
 
@@ -25,6 +25,12 @@ function formatNumber(num) {
 function updateButtons() {
   upgrades.forEach(up => {
     const button = document.getElementById(up.id);
+    if (up.type === 'gpsMulti' && purchasedMults.has(up.id)) {
+      button.disabled = true;
+      button.classList.remove('affordable');
+      button.classList.add('unaffordable');
+      return;
+    }
     if (score >= up.cost) {
       button.classList.add('affordable');
       button.classList.remove('unaffordable');
@@ -51,7 +57,13 @@ async function saveGame() {
     },
     body: JSON.stringify({
       game: 'clicker',
-      payload: { score: Math.floor(score), gpc: Math.floor(gpc), gps: Math.floor(gps) }
+      payload: {
+        score: Math.floor(score),
+        gpc: Math.floor(gpc),
+        gps: Math.floor(gps),
+        gpsm: gpsMultiplier,
+        pm: [...purchasedMults]
+      }
     })
   });
 }
@@ -64,9 +76,15 @@ async function loadGame() {
   });
   const { data } = await res.json();
   if (data?.payload) {
-    score = data.payload.score || 0;
-    gpc   = data.payload.gpc   || 1;
-    gps   = data.payload.gps   || 0;
+    score        = data.payload.score || 0;
+    gpc          = data.payload.gpc   || 1;
+    gps          = data.payload.gps   || 0;
+    gpsMultiplier = data.payload.gpsm  || 1;
+    (data.payload.pm || []).forEach(id => {
+      purchasedMults.add(id);
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = true;
+    });
   }
   updateDisplay();
 }
@@ -74,6 +92,8 @@ async function loadGame() {
 let score = 0;
 let gps = 0;
 let gpc = 1;
+let gpsMultiplier = 1;
+const purchasedMults = new Set();
 
 const scoreDisplay = document.getElementById('score');
 const gpcDisplay   = document.getElementById('gpc');
@@ -81,22 +101,40 @@ const gpsDisplay   = document.getElementById('gps');
 const cookie       = document.getElementById('cookie');
 
 const upgrades = [
-  { id: 'up1',  type: 'gps', value: 0.25,      cost: 25 },
-  { id: 'up2',  type: 'gpc', value: 1,          cost: 100 },
-  { id: 'up3',  type: 'gpc', value: 10,         cost: 500 },
-  { id: 'up4',  type: 'gps', value: 4,          cost: 1500 },
-  { id: 'up5',  type: 'gpc', value: 50,         cost: 2000 },
-  { id: 'up6',  type: 'gps', value: 15,         cost: 10000 },
-  { id: 'up7',  type: 'gpc', value: 450,        cost: 15000 },
-  { id: 'up8',  type: 'gps', value: 50,         cost: 100000 },
-  { id: 'up9',  type: 'gps', value: 200,        cost: 200000 },
-  { id: 'up10', type: 'gpc', value: 3000,       cost: 1000000 },
-  { id: 'up11', type: 'gpc', value: 20000,      cost: 6000000 },
-  { id: 'up12', type: 'gps', value: 1000,       cost: 18000000 },
-  { id: 'up13', type: 'gpc', value: 100000,     cost: 80000000 },
-  { id: 'up14', type: 'gps', value: 10000,      cost: 160000000 },
-  { id: 'up15', type: 'gpc', value: 10000000,   cost: 1000000000 },
-  { id: 'up16', type: 'gps', value: 500000,     cost: 10000000000 },
+  // ── Existing ──────────────────────────────────────────────
+  { id: 'up1',  type: 'gps', value: 0.25,        cost: 25 },
+  { id: 'up2',  type: 'gpc', value: 1,            cost: 100 },
+  { id: 'up3',  type: 'gpc', value: 10,           cost: 500 },
+  { id: 'up4',  type: 'gps', value: 4,            cost: 1500 },
+  { id: 'up5',  type: 'gpc', value: 50,           cost: 2000 },
+  { id: 'up6',  type: 'gps', value: 15,           cost: 10000 },
+  { id: 'up7',  type: 'gpc', value: 450,          cost: 15000 },
+  { id: 'up8',  type: 'gps', value: 50,           cost: 100000 },
+  { id: 'up9',  type: 'gps', value: 200,          cost: 200000 },
+  { id: 'up10', type: 'gpc', value: 3000,         cost: 1000000 },
+  { id: 'up11', type: 'gpc', value: 20000,        cost: 6000000 },
+  { id: 'up12', type: 'gps', value: 1000,         cost: 18000000 },
+  { id: 'up13', type: 'gpc', value: 100000,       cost: 80000000 },
+  { id: 'up14', type: 'gps', value: 10000,        cost: 160000000 },
+  { id: 'up15', type: 'gpc', value: 10000000,     cost: 1000000000 },
+  { id: 'up16', type: 'gps', value: 500000,       cost: 10000000000 },
+  // ── New additive ──────────────────────────────────────────
+  { id: 'up17', type: 'gps', value: 10e6,         cost: 50e9 },
+  { id: 'up18', type: 'gpc', value: 200e6,        cost: 200e9 },
+  { id: 'up19', type: 'gps', value: 100e6,        cost: 1e12 },
+  { id: 'up20', type: 'gpc', value: 2e9,          cost: 5e12 },
+  { id: 'up21', type: 'gps', value: 1e9,          cost: 25e12 },
+  { id: 'up22', type: 'gpc', value: 20e9,         cost: 125e12 },
+  { id: 'up23', type: 'gps', value: 10e9,         cost: 625e12 },
+  { id: 'up24', type: 'gpc', value: 200e9,        cost: 3e15 },
+  // ── GPS multipliers (one-time only) ───────────────────────
+  { id: 'up25', type: 'gpsMulti', value: 2,       cost: 20e15 },
+  { id: 'up26', type: 'gpsMulti', value: 5,       cost: 200e15 },
+  { id: 'up27', type: 'gpsMulti', value: 10,      cost: 2.5e18 },
+  { id: 'up28', type: 'gpsMulti', value: 50,      cost: 35e18 },
+  { id: 'up29', type: 'gpsMulti', value: 100,     cost: 500e18 },
+  { id: 'up30', type: 'gpsMulti', value: 1000,    cost: 1e22 },
+  { id: 'up31', type: 'gpsMulti', value: 20000,   cost: 1e24 },
 ];
 
 updateButtons();
@@ -140,17 +178,24 @@ cookie.addEventListener("click", (e) => {
 upgrades.forEach(up => {
   const button = document.getElementById(up.id);
   button.addEventListener("click", () => {
-    if (score >= up.cost) {
-      score -= up.cost;
-      if (up.type === "gps") gps += up.value;
-      else gpc += up.value;
-      button.classList.add('purchased');
-      setTimeout(() => button.classList.remove('purchased'), 400);
-      updateDisplay();
+    if (up.type === 'gpsMulti' && purchasedMults.has(up.id)) return;
+    if (score < up.cost) return;
+    score -= up.cost;
+    if (up.type === 'gps') {
+      gps += up.value;
+    } else if (up.type === 'gpc') {
+      gpc += up.value;
+    } else if (up.type === 'gpsMulti') {
+      gpsMultiplier *= up.value;
+      purchasedMults.add(up.id);
+      button.disabled = true;
     }
+    button.classList.add('purchased');
+    setTimeout(() => button.classList.remove('purchased'), 400);
+    updateDisplay();
   });
 });
 
-setInterval(() => { score += gps / 60; }, 1000 / 60);
+setInterval(() => { score += (gps * gpsMultiplier) / 60; }, 1000 / 60);
 setInterval(updateDisplay, 100);
 setInterval(saveGame, 5000);
