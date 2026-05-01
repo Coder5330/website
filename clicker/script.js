@@ -205,7 +205,7 @@ updateButtons();
 loadGame();
 
 cookie.addEventListener("click", () => {
-  recordClick(); // Track click for bot detection
+  if (recordClick()) return; // Bot detected — block click
   score += gpc;
   updateDisplay();
 });

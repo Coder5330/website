@@ -75,7 +75,7 @@ canvas.addEventListener("click", () => {
     }
 
     if (timer && (Date.now() - startTime) / 1000 < DURATION) {
-        recordClick(); // Track click for bot detection
+        if (recordClick()) return; // Bot detected — block click
         clickCount++;
         clicks.textContent = "Clicks: " + clickCount;
     }

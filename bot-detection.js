@@ -28,7 +28,7 @@ function analyzeClickPattern() {
   // Check 1: Clicks per second
   const recentClicks = clickTimes.filter(t => now - t < 1000).length;
   if (recentClicks > BOT_CONFIG.MAX_CLICKS_PER_SEC) {
-    isBotSuspected = true;
+    flagBot();
     return true;
   }
 
@@ -36,7 +36,7 @@ function analyzeClickPattern() {
   for (let i = 1; i < clickTimes.length; i++) {
     const interval = clickTimes[i] - clickTimes[i-1];
     if (interval < BOT_CONFIG.MIN_CLICK_INTERVAL) {
-      isBotSuspected = true;
+      flagBot();
       return true;
     }
   }
@@ -52,12 +52,18 @@ function analyzeClickPattern() {
     const variance = intervals.reduce((a,b) => a + Math.pow(b - avgInterval, 2)) / intervals.length;
 
     if (variance < BOT_CONFIG.MAX_REGULAR_VARIANCE) {
-      isBotSuspected = true;
+      flagBot();
       return true;
     }
   }
 
   return false;
+}
+
+function flagBot() {
+  if (isBotSuspected) return; // Already flagged, don't re-show modal
+  isBotSuspected = true;
+  showCaptchaModal();
 }
 
 function showCaptchaModal() {
