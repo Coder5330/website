@@ -32,6 +32,8 @@ ul {
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255,255,255,0.05);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .menu li a {
