@@ -99,6 +99,34 @@ button.purchased {
     background-color: transparent;
     color: transparent;
     user-select: none;
+    touch-action: manipulation;
+}
+
+@media (max-width: 600px) {
+    body {
+        height: auto;
+        overflow: auto;
+        padding-top: 70px;
+    }
+
+    .container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .box {
+        width: 92%;
+        margin: 2% auto;
+    }
+
+    .upgrades {
+        overflow-y: visible;
+        max-height: none;
+    }
+
+    #cookie img {
+        width: 140px;
+    }
 }
 
 @media (hover: hover) {
