@@ -29,6 +29,7 @@ buttons.forEach(btn => {
 });
 
 async function saveCpsScore(cpsValue, duration) {
+  if (!canSaveScore()) return; // Block save if bot suspected
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return;
   const { data } = await sb.from('scores')
@@ -74,6 +75,7 @@ canvas.addEventListener("click", () => {
     }
 
     if (timer && (Date.now() - startTime) / 1000 < DURATION) {
+        recordClick(); // Track click for bot detection
         clickCount++;
         clicks.textContent = "Clicks: " + clickCount;
     }

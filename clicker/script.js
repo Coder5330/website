@@ -94,6 +94,7 @@ function saveGameSync() {
 }
 
 async function saveGame() {
+  if (!canSaveScore()) return; // Block save if bot suspected
   const session = await getSession();
   if (!session) return;
   const status = document.getElementById('save-status');
@@ -204,6 +205,7 @@ updateButtons();
 loadGame();
 
 cookie.addEventListener("click", () => {
+  recordClick(); // Track click for bot detection
   score += gpc;
   updateDisplay();
 });
