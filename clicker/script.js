@@ -93,6 +93,7 @@ const upgrades = [
   { id: 'up16', type: 'gps', value: 500000,     cost: 10000000000 },
 ];
 
+updateButtons();
 loadGame();
 
 cookie.addEventListener("click", () => {
@@ -143,69 +144,4 @@ upgrades.forEach(up => {
 
 setInterval(() => { score += gps / 60; }, 1000 / 60);
 setInterval(updateDisplay, 100);
-setInterval(saveGame, 5000); // save every 5 secondsfunction checksum(score, gpc, gps) {
-    const raw = `${Math.floor(score)}:${Math.floor(gpc)}:${Math.floor(gps)}:${SAVE_SECRET}`;
-    let hash = 0;
-    for (let i = 0; i < raw.length; i++) {
-        hash = (Math.imul(31, hash) + raw.charCodeAt(i)) | 0;
-    }
-    return hash.toString(16);
-}
-
-function saveGame() {
-    const s = Math.floor(score);
-    const c = Math.floor(gpc);
-    const g = Math.floor(gps);
-    localStorage.setItem('score', s);
-    localStorage.setItem('gpc', c);
-    localStorage.setItem('gps', g);
-    localStorage.setItem('chk', checksum(s, c, g));
-}
-
-function loadGame() {
-    const s = parseFloat(localStorage.getItem('score')) || 0;
-    const c = parseFloat(localStorage.getItem('gpc')) || 1;
-    const g = parseFloat(localStorage.getItem('gps')) || 0;
-    const savedChk = localStorage.getItem('chk');
-
-    if (savedChk === null || savedChk !== checksum(s, c, g)) {
-        // Tampered — reset to zero
-        console.warn("Save data tampered. Resetting.");
-        localStorage.clear();
-        score = 0; gpc = 1; gps = 0;
-    } else {
-        score = s; gpc = c; gps = g;
-    }
-    updateDisplay();
-}
-
-// --- Game state ---
-let score = 0;
-let gps = 0;
-let gpc = 1;
-const scoreDisplay = document.getElementById('score');
-const gpcDisplay = document.getElementById('gpc');
-const gpsDisplay = document.getElementById('gps');
-const cookie = document.getElementById('cookie');
-
-const upgrades = [
-    { id: 'up1',  type: 'gps', value: 0.25,    cost: 25 },
-    { id: 'up2',  type: 'gpc', value: 1,        cost: 100 },
-    { id: 'up3',  type: 'gpc', value: 10,       cost: 500 },
-    { id: 'up4',  type: 'gps', value: 4,        cost: 1500 },
-    { id: 'up5',  type: 'gpc', value: 50,       cost: 2000 },
-    { id: 'up6',  type: 'gps', value: 15,       cost: 10000 },
-    { id: 'up7',  type: 'gpc', value: 450,      cost: 15000 },
-    { id: 'up8',  type: 'gps', value: 50,       cost: 100000 },
-    { id: 'up9',  type: 'gps', value: 200,      cost: 200000 },
-    { id: 'up10', type: 'gpc', value: 3000,     cost: 1000000 },
-    { id: 'up11', type: 'gpc', value: 20000,    cost: 6000000 },
-    { id: 'up12', type: 'gps', value: 1000,     cost: 18000000 },
-    { id: 'up13', type: 'gpc', value: 100000,   cost: 80000000 },
-    { id: 'up14', type: 'gps', value: 10000,    cost: 160000000 },
-    { id: 'up15', type: 'gpc', value: 10000000, cost: 1000000000 },
-    { id: 'up16', type: 'gps', value: 500000,   cost: 10000000000 },
-];
-
-
-setInterval(saveGame, 1000);
+setInterval(saveGame, 5000);
