@@ -33,8 +33,10 @@ function updateButtons() {
 
     if (up.type === 'gpsMulti' && purchasedMults.has(up.id)) {
       button.disabled = true;
-      button.classList.remove('affordable');
-      button.classList.add('unaffordable');
+      button.classList.remove('affordable', 'unaffordable');
+      button.classList.add('one-time-bought');
+      const costEl = button.querySelectorAll('p')[1];
+      if (costEl) costEl.textContent = '✓ purchased';
       return;
     }
 
@@ -60,6 +62,9 @@ async function getToken() {
 async function saveGame() {
   const token = await getToken();
   if (!token) return;
+  const status = document.getElementById('save-status');
+  status.textContent = '⬤ saving...';
+  status.className = 'saving';
   await fetch('/api/scores', {
     method: 'POST',
     headers: {
@@ -78,6 +83,9 @@ async function saveGame() {
       }
     })
   });
+  status.textContent = '⬤ saved';
+  status.className = 'saved';
+  setTimeout(() => { status.textContent = '⬤ saved'; status.className = ''; }, 2000);
 }
 
 async function loadGame() {
@@ -96,7 +104,12 @@ async function loadGame() {
     (data.payload.pm || []).forEach(id => {
       purchasedMults.add(id);
       const btn = document.getElementById(id);
-      if (btn) btn.disabled = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('one-time-bought');
+        const costEl = btn.querySelectorAll('p')[1];
+        if (costEl) costEl.textContent = '✓ purchased';
+      }
     });
   }
   updateDisplay();

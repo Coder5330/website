@@ -94,6 +94,25 @@ button.purchased {
     color: #fff !important;
 }
 
+button.one-time-bought {
+    background: linear-gradient(135deg, #1a3a2a, #0f2d1f) !important;
+    color: #34d399 !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
+    cursor: default;
+    opacity: 0.75;
+}
+
+#save-status {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: #334155;
+    margin-top: 8px;
+    transition: color 0.3s;
+}
+
+#save-status.saving { color: #64748b; }
+#save-status.saved  { color: #34d399; }
+
 #cookie {
     border-width: 0px;
     background-color: transparent;
