@@ -89,13 +89,26 @@ function startTimer() {
 }
 
 content.addEventListener("keydown", (e) => {
+  if (e.key === 'Backspace') {
+    if (index === 0) return;
+    spans[index].classList.remove('current');
+    index--;
+    if (spans[index].classList.contains('correct')) correct--;
+    total = Math.max(0, total - 1);
+    spans[index].classList.remove('correct', 'wrong');
+    spans[index].classList.add('current');
+    const offset = spans[index].offsetTop;
+    content.style.transform = `translateY(-${Math.max(0, offset - 40)}px)`;
+    return;
+  }
+
+  if (e.key.length > 1) return;
+
   if (!startTime) {
     message1.textContent = "Test started!";
     startTime = Date.now();
     startTimer();
   }
-
-  if (e.key.length > 1) return;
 
   total++;
 
@@ -111,23 +124,15 @@ content.addEventListener("keydown", (e) => {
 
   if (index < spans.length) {
     spans[index].classList.add("current");
-
-    // 🔥 SCROLLING LOGIC
-    const currentSpan = spans[index];
-    const offset = currentSpan.offsetTop;
-
+    const offset = spans[index].offsetTop;
     content.style.transform = `translateY(-${Math.max(0, offset - 40)}px)`;
   }
 
   if (index === spans.length) {
     clearInterval(timer);
     message1.textContent = "Test finished!";
-    
     const result = getRank(wpm, accuracy);
-    const rank = document.getElementById("rank");
-    const message2 = document.getElementById("message2");
-    
-    rank.textContent = "Your rank: " + result.rank;
-    message2.textContent = result.message
+    document.getElementById("rank").textContent = "Your rank: " + result.rank;
+    document.getElementById("message2").textContent = result.message;
   }
 });

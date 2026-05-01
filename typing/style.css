@@ -39,13 +39,19 @@ span {
 }
 
 .current {
-  border-bottom: 2px solid #00f5ff;
+  position: relative;
   background: rgba(0, 245, 255, 0.15);
 }
 
 .current::after {
-  content: "|";
-  animation: blink 1s infinite;
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #00f5ff;
+  animation: blink 0.9s infinite;
 }
 
 @keyframes blink {
