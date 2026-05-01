@@ -99,13 +99,18 @@ async function saveGame() {
   const status = document.getElementById('save-status');
   status.textContent = '⬤ saving...';
   status.className = 'saving';
-  const { error } = await sb.from('scores').upsert(buildRow(session), { onConflict: 'player_id,game' });
+  const row = buildRow(session);
+  const { data: saved, error } = await sb.rpc('save_clicker_score', {
+    p_player_id: session.user.id,
+    p_payload: row.payload
+  });
   if (error) {
     status.textContent = '⬤ error';
     status.className = '';
     console.error('save error:', error);
     return;
   }
+  if (!saved) { status.textContent = '⛔ stop cheating'; status.className = ''; return; }
   status.textContent = '⬤ saved';
   status.className = 'saved';
   setTimeout(() => { status.textContent = '⬤ saved'; status.className = ''; }, 2000);

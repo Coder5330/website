@@ -34,12 +34,13 @@ async function saveCpsScore(cpsValue, duration) {
   const status = document.getElementById('save-status');
   status.textContent = '⬤ saving...';
   status.className = 'saving';
-  const { error } = await sb.rpc('save_cps_score', {
+  const { data: saved, error } = await sb.rpc('save_cps_score', {
     p_player_id: session.user.id,
     p_duration: duration,
     p_cps: parseFloat(cpsValue.toFixed(2))
   });
   if (error) { console.error('save error:', error); status.textContent = '⬤ error'; status.className = ''; return; }
+  if (!saved) { status.textContent = '⛔ stop cheating'; status.className = ''; return; }
   status.textContent = '⬤ saved';
   status.className = 'saved';
 }
