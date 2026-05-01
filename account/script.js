@@ -1,7 +1,6 @@
-function _initials(user) {
-  const name = user.user_metadata?.display_name;
-  if (name) return name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  return user.email[0].toUpperCase();
+function _initials(displayName) {
+  if (displayName) return displayName.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  return '?';
 }
 
 function _avatarColor(id) {
@@ -15,41 +14,43 @@ function _avatarColor(id) {
   if (!session) return;
   const user = session.user;
 
+  // Load user profile from users table
+  const { data: userProfile } = await sb.from('users').select('*').eq('id', user.id).single();
+
   const hash = window.location.hash.slice(1) || 'profile';
-  activateTab(hash, user);
+  activateTab(hash, user, userProfile);
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = () => {
       const tab = btn.dataset.tab;
       history.replaceState(null, '', '#' + tab);
-      activateTab(tab, user);
+      activateTab(tab, user, userProfile);
     };
   });
 })();
 
-function activateTab(tab, user) {
+function activateTab(tab, user, userProfile) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tab));
-  if (tab === 'profile')  loadProfile(user);
-  if (tab === 'settings') loadSettings(user);
-  if (tab === 'delete')   loadDelete(user);
+  if (tab === 'profile')  loadProfile(user, userProfile);
+  if (tab === 'settings') loadSettings(user, userProfile);
+  if (tab === 'delete')   loadDelete(user, userProfile);
 }
 
 let profileLoaded = false;
-async function loadProfile(user) {
+async function loadProfile(user, userProfile) {
   if (profileLoaded) return;
   profileLoaded = true;
   const el = document.getElementById('tab-profile');
-  const meta = user.user_metadata || {};
-  const name = meta.display_name || user.email.split('@')[0];
+  const name = userProfile?.display_name || userProfile?.username || user.email;
   const color = _avatarColor(user.id);
 
   el.innerHTML = `
     <div class="profile-header">
-      <div class="profile-avatar-lg" style="background:${color}">${_initials(user)}</div>
+      <div class="profile-avatar-lg" style="background:${color}">${_initials(userProfile?.display_name)}</div>
       <div>
         <div class="profile-name">${name}</div>
-        <div class="profile-email">${user.email}</div>
+        <div class="profile-email">${userProfile?.email || user.email}</div>
       </div>
     </div>
     <div class="section-title">Top scores</div>
@@ -91,16 +92,15 @@ async function loadProfile(user) {
 }
 
 let settingsLoaded = false;
-function loadSettings(user) {
+function loadSettings(user, userProfile) {
   if (settingsLoaded) return;
   settingsLoaded = true;
   const el = document.getElementById('tab-settings');
-  const meta = user.user_metadata || {};
 
   el.innerHTML = `
     <div class="settings-section">
       <div class="section-title">Display name</div>
-      <input id="s-name" type="text" placeholder="Your name" value="${meta.display_name || ''}">
+      <input id="s-name" type="text" placeholder="Your name" value="${userProfile?.display_name || ''}">
       <div class="field-row">
         <button id="s-name-btn" class="btn-primary">Save</button>
         <span id="s-name-st" class="field-status"></span>
@@ -120,14 +120,13 @@ function loadSettings(user) {
     const name = document.getElementById('s-name').value.trim();
     const st = document.getElementById('s-name-st');
     st.textContent = 'Saving…'; st.className = 'field-status';
-    const { error } = await sb.auth.updateUser({ data: { display_name: name } });
-    if (error) { st.textContent = error.message; return; }
+    const { error: err1 } = await sb.from('users').update({ display_name: name }).eq('id', user.id);
+    const { error: err2 } = await sb.auth.updateUser({ data: { display_name: name } });
+    if (err1 || err2) { st.textContent = (err1 || err2).message; return; }
     st.textContent = 'Saved!'; st.className = 'field-status ok';
     profileLoaded = false;
     const avatar = document.querySelector('.menu-avatar');
-    if (avatar) avatar.textContent = name
-      ? name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2)
-      : user.email[0].toUpperCase();
+    if (avatar) avatar.textContent = _initials(name);
   };
 
   document.getElementById('s-pw-btn').onclick = async () => {
