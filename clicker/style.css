@@ -47,9 +47,11 @@ button {
 }
 
 #cookie {
-    border-width: 0px;
-    background-color: transparent;
-    color: transparent;
+  border-width: 0px;
+  background-color: transparent;
+  color: transparent;
+  touch-action: none;
+  user-select: none;
 }
 
 #cookie:hover {
