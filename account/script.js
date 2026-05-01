@@ -142,12 +142,11 @@ function loadSettings(user, userProfile) {
 }
 
 let deleteLoaded = false;
-function loadDelete(user) {
+function loadDelete(user, userProfile) {
   if (deleteLoaded) return;
   deleteLoaded = true;
   const el = document.getElementById('tab-delete');
-  const meta = user.user_metadata || {};
-  const confirmStr = meta.display_name || user.email.split('@')[0];
+  const confirmStr = userProfile?.display_name || userProfile?.username || user.email.split('@')[0];
 
   el.innerHTML = `
     <p class="muted">This is permanent and cannot be undone.</p>
