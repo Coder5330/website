@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Slushie Rush</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game">
+    <header id="hud">
+      <div class="stat"><span class="label">Time</span><span id="time">60.0</span></div>
+      <div class="stat"><span class="label">Served</span><span id="served">0</span> / 50</div>
+      <div class="stat"><span class="label">Spills</span><span id="spills">0</span></div>
+    </header>
+
+    <div id="table">
+      <div class="station" data-slot="0">
+        <div class="dispenser"><img src="assets/dispenser.png" alt="" onerror="this.style.display='none'"></div>
+        <div class="stream"></div>
+        <div class="spot">
+          <div class="cup empty"><div class="fill"></div></div>
+          <div class="puddle"></div>
+        </div>
+        <div class="key">1</div>
+      </div>
+      <div class="station" data-slot="1">
+        <div class="dispenser"><img src="assets/dispenser.png" alt="" onerror="this.style.display='none'"></div>
+        <div class="stream"></div>
+        <div class="spot">
+          <div class="cup empty"><div class="fill"></div></div>
+          <div class="puddle"></div>
+        </div>
+        <div class="key">2</div>
+      </div>
+      <div class="station" data-slot="2">
+        <div class="dispenser"><img src="assets/dispenser.png" alt="" onerror="this.style.display='none'"></div>
+        <div class="stream"></div>
+        <div class="spot">
+          <div class="cup empty"><div class="fill"></div></div>
+          <div class="puddle"></div>
+        </div>
+        <div class="key">3</div>
+      </div>
+      <div class="station" data-slot="3">
+        <div class="dispenser"><img src="assets/dispenser.png" alt="" onerror="this.style.display='none'"></div>
+        <div class="stream"></div>
+        <div class="spot">
+          <div class="cup empty"><div class="fill"></div></div>
+          <div class="puddle"></div>
+        </div>
+        <div class="key">4</div>
+      </div>
+      <div class="station" data-slot="4">
+        <div class="dispenser"><img src="assets/dispenser.png" alt="" onerror="this.style.display='none'"></div>
+        <div class="stream"></div>
+        <div class="spot">
+          <div class="cup empty"><div class="fill"></div></div>
+          <div class="puddle"></div>
+        </div>
+        <div class="key">5</div>
+      </div>
+    </div>
+
+    <div id="overlay" class="show">
+      <div class="panel">
+        <h1>Slushie Rush</h1>
+        <p>Hold <b>1&ndash;5</b> to fill the cup at each station.</p>
+        <p>Serve <b>50 cups in 60 seconds</b>. Don't overflow &mdash; spills cost 3s of cleanup.</p>
+        <button id="startBtn">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
