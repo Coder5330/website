@@ -1,5 +1,48 @@
 // menu.js — include on every page AFTER supabase.js and auth-guard.js
 
+const GAMES = [
+  { label: 'Typing Simulator', href: '/typing/index.html' },
+  { label: 'Cookie Clicker',   href: '/clicker/index.html' },
+  { label: 'CPS Test',         href: '/cps/index.html' },
+  { label: 'PianoTiles',       href: '/piano/index.html' },
+  { label: 'CTF Challenges',   href: '/ctf/index.html' },
+  { label: 'Math Game',        href: '/math_game/index.html' },
+];
+
+function _buildDrawer() {
+  const overlay = document.createElement('div');
+  overlay.className = 'drawer-overlay';
+
+  const drawer = document.createElement('nav');
+  drawer.className = 'game-drawer';
+  drawer.innerHTML = `<div class="drawer-title">Games</div>` +
+    GAMES.map(g => {
+      const active = window.location.pathname === g.href ? ' active' : '';
+      return `<a class="drawer-link${active}" href="${g.href}">${g.label}</a>`;
+    }).join('');
+
+  const btn = document.createElement('button');
+  btn.className = 'hamburger-btn';
+  btn.textContent = '☰';
+  btn.setAttribute('aria-label', 'Open games menu');
+
+  const menu = document.querySelector('.menu');
+  if (menu) menu.appendChild(btn);
+  document.body.appendChild(overlay);
+  document.body.appendChild(drawer);
+
+  let open = false;
+  const toggle = () => {
+    open = !open;
+    drawer.classList.toggle('open', open);
+    overlay.classList.toggle('open', open);
+    btn.textContent = open ? '✕' : '☰';
+  };
+
+  btn.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+  overlay.addEventListener('click', toggle);
+}
+
 function _initials(user) {
   const name = user.user_metadata?.display_name;
   if (name) return name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -13,6 +56,8 @@ function _avatarColor(id) {
 }
 
 (async () => {
+  _buildDrawer();
+
   const user = await getUser();
   if (!user) return;
 
