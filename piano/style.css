@@ -156,6 +156,7 @@ button:hover { background: #1a7ae0; }
   height: 110px;
   display: flex;
   z-index: 4;
+  pointer-events: none;
 }
 
 #keyHints span {
