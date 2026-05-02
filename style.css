@@ -443,3 +443,21 @@ ul {
   color: #64748b;
   line-height: 1.8;
 }
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  body { padding-top: 60px; }
+
+  .menu { padding: 10px 14px; gap: 8px; justify-content: flex-start; }
+  .menu li a { font-size: 11px; padding: 5px 10px; }
+
+  .game-drawer { width: 80vw; max-width: 300px; }
+
+  .page-header { padding: 2rem 1rem 1.5rem; }
+  .page-header h1 { font-size: 24px; }
+  .page-header p { font-size: 12px; }
+
+  .card-grid { grid-template-columns: 1fr; padding: 0 1rem 2rem; gap: 12px; }
+  .card { padding: 1.1rem; }
+  .card-title { font-size: 14px; }
+}
