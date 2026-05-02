@@ -40,7 +40,7 @@ async function saveCpsScore(cpsValue, duration) {
     p_cps: parseFloat(cpsValue.toFixed(2))
   });
   if (error) { console.error('save error:', error); status.textContent = '⬤ error'; status.className = ''; return; }
-  if (saved === false) { status.textContent = '⛔ stop cheating'; status.className = ''; return; }
+  if (saved === false) { alert('STTTOPPP CHEATTTING'); status.textContent = '⛔ cheater'; status.className = ''; return; }
   status.textContent = '⬤ saved';
   status.className = 'saved';
 }
