@@ -1,5 +1,5 @@
 #wrapper {
-  width: 500px;
+  width: min(500px, 90vw);
   height: 120px;
   overflow: hidden;
   position: relative;
