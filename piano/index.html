@@ -4,9 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Piano Tiles</title>
+<link rel="stylesheet" href="../style.css" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+    <li><a href="../about/index.html">About</a></li>
+  </ul>
   <div id="app">
     <div id="menu" class="screen">
       <h1>Piano Tiles</h1>
@@ -54,5 +59,9 @@
 
   <audio id="music" src="assets/music.mp3" preload="auto" loop></audio>
   <script src="game.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
 </body>
 </html>
