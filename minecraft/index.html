@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Minecraft 3D</title>
+<link rel="stylesheet" href="../style.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+    <li><a href="../about/index.html">About</a></li>
+  </ul>
+
+  <div id="mcApp">
+    <canvas id="mcCanvas"></canvas>
+    <div id="crosshair">+</div>
+    <div id="hotbar"></div>
+    <div id="hudInfo">
+      <div id="roomBadge"></div>
+      <div id="onlineBadge"></div>
+    </div>
+    <div id="nameTags"></div>
+
+    <div id="lobbyPanel" class="mc-overlay">
+      <div class="mc-panel">
+        <h1>⛏️ Minecraft 3D</h1>
+        <p class="mc-sub">3D voxel world with friends — built from your Python game!</p>
+        <button id="createBtn">Create World</button>
+        <div class="mc-or">— or —</div>
+        <div class="mc-join">
+          <input id="codeInput" type="text" maxlength="4" placeholder="CODE" />
+          <button id="joinBtn">Join</button>
+        </div>
+        <p class="mc-hint">
+          Click canvas to lock cursor &nbsp;·&nbsp; WASD move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; Mouse look<br>
+          Left-click break &nbsp;·&nbsp; Right-click place &nbsp;·&nbsp; 1-7 select block &nbsp;·&nbsp; ESC unlock
+        </p>
+      </div>
+    </div>
+
+    <div id="waitPanel" class="mc-overlay" style="display:none">
+      <div class="mc-panel">
+        <p id="waitMsg">Connecting to world…</p>
+        <div class="mc-code">Room: <span id="waitCode"></span></div>
+        <p class="mc-hint">Share the code with your friend!</p>
+      </div>
+    </div>
+
+    <div id="lockHint" class="lock-hint" style="display:none">
+      Click to lock cursor
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

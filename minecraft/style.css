@@ -1,0 +1,223 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #000;
+  padding-top: 55px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#mcApp {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 55px);
+  overflow: hidden;
+  background: #88c5ff;
+}
+
+#mcCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font: bold 22px monospace;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+  pointer-events: none;
+  display: none;
+  z-index: 5;
+}
+
+#hotbar {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 4px;
+  background: rgba(0,0,0,0.4);
+  padding: 4px;
+  border-radius: 6px;
+  z-index: 5;
+}
+#hotbar .slot {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.3);
+}
+#hotbar .slot.active {
+  border-color: #ffe66d;
+  box-shadow: 0 0 8px rgba(255,230,109,0.6);
+}
+#hotbar .swatch {
+  width: 28px; height: 28px;
+  border: 1px solid rgba(0,0,0,0.4);
+  border-radius: 2px;
+}
+#hotbar .num {
+  position: absolute;
+  bottom: 1px; left: 3px;
+  font: 10px monospace;
+  color: rgba(255,255,255,0.8);
+}
+
+#hudInfo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: none;
+  font-family: monospace;
+  font-size: 12px;
+  color: #fff;
+  z-index: 5;
+}
+#roomBadge, #onlineBadge {
+  background: rgba(0,0,0,0.55);
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+#roomBadge { color: #ffe66d; font-weight: bold; }
+
+#nameTags {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.name-tag {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font: bold 11px monospace;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.lock-hint {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font: 13px sans-serif;
+  z-index: 5;
+}
+
+/* Overlay panels */
+.mc-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.7);
+  z-index: 10;
+}
+.mc-panel {
+  background: linear-gradient(160deg,#2d3a7b,#1e2a5a);
+  border: 1px solid rgba(255,255,255,0.13);
+  padding: 2.4rem;
+  border-radius: 18px;
+  text-align: center;
+  max-width: 440px;
+  width: 92%;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.65);
+}
+.mc-panel h1 {
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-size: 2.2rem;
+  color: #ffe66d;
+  margin-bottom: 0.4rem;
+  letter-spacing: 1px;
+}
+.mc-sub {
+  font-family: system-ui, sans-serif;
+  color: rgba(255,255,255,0.65);
+  font-size: 0.92rem;
+  margin-bottom: 1.6rem;
+}
+.mc-panel > button {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto 0.7rem;
+  padding: 13px;
+  font: bold 1.05rem 'Trebuchet MS', system-ui, sans-serif;
+  background: #ffe66d;
+  color: #1a1a2e;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.mc-panel > button:hover { transform: translateY(-2px); }
+.mc-or {
+  font-family: system-ui, sans-serif;
+  color: rgba(255,255,255,0.3);
+  margin: 0.6rem 0;
+  font-size: 0.82rem;
+}
+.mc-join {
+  display: flex;
+  gap: 8px;
+  max-width: 240px;
+  margin: 0 auto 1.2rem;
+}
+.mc-join input {
+  flex: 1;
+  padding: 11px 6px;
+  font-size: 1.15rem;
+  font-weight: bold;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 6px;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,255,255,0.22);
+  border-radius: 8px;
+  color: #fff;
+  outline: none;
+}
+.mc-join input:focus { border-color: #ffe66d; }
+.mc-join input::placeholder { letter-spacing: 2px; opacity: 0.4; font-size: 0.82rem; }
+.mc-join button {
+  padding: 11px 14px;
+  font: bold 0.95rem 'Trebuchet MS', system-ui, sans-serif;
+  background: #5ec9ff;
+  color: #0a0a2e;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.mc-hint {
+  font-family: system-ui, sans-serif;
+  font-size: 0.76rem;
+  color: rgba(255,255,255,0.42);
+  line-height: 1.55;
+  margin-top: 0.5rem;
+}
+.mc-code {
+  font-family: monospace;
+  font-size: 1.6rem;
+  color: #ffe66d;
+  letter-spacing: 8px;
+  margin: 0.6rem 0;
+}
