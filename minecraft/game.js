@@ -21,6 +21,12 @@
   const EYE = 1.6;        // eye height from feet
   const REACH = 5.5;
 
+  // Hand-mining times (seconds), straight from voxel_handler.py BLOCK_DATA
+  const BREAK_TIME = {
+    [SAND]: 0.75, [GRASS]: 0.9, [DIRT]: 0.75, [STONE]: 7.5,
+    [SNOW]: 0.5,  [LEAVES]: 0.3, [WOOD]: 3.0, [BEDROCK]: Infinity,
+  };
+
   // ── State ────────────────────────────────────────────────────────────────
   let world = null; // Uint8Array WX*WY*WZ
   let myId='', myName='Player', myColor=0xe74c3c;
@@ -101,6 +107,32 @@
   const blockMaterial = new THREE.MeshLambertMaterial({ map: atlasTex });
   for (const id of ALL_BLOCKS) blockGeos[id] = makeBlockGeo(id);
   blockGeos[BEDROCK] = blockGeos[STONE];
+
+  // ── Crack textures (10 stages: crack_0..crack_9.png) ─────────────────────
+  const crackTextures = [];
+  for (let i = 0; i < 10; i++) {
+    const t = new THREE.TextureLoader().load(`assets/crack_${i}.png`);
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.generateMipmaps = false;
+    crackTextures.push(t);
+  }
+  const crackMat = new THREE.MeshBasicMaterial({
+    transparent: true, opacity: 0.95, depthWrite: false, polygonOffset: true,
+    polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  });
+  const crackMesh = new THREE.Mesh(new THREE.BoxGeometry(1.001, 1.001, 1.001), crackMat);
+  crackMesh.visible = false;
+  crackMesh.frustumCulled = false;
+  scene.add(crackMesh);
+
+  // ── Block selection wireframe (looks like Minecraft's outline) ───────────
+  const selectGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.002, 1.002, 1.002));
+  const selectMat = new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55 });
+  const selectMesh = new THREE.LineSegments(selectGeo, selectMat);
+  selectMesh.visible = false;
+  selectMesh.frustumCulled = false;
+  scene.add(selectMesh);
 
   // ── World helpers ────────────────────────────────────────────────────────
   const idx = (x,y,z) => (y * WZ + z) * WX + x;
@@ -333,12 +365,55 @@
     }
   }
 
-  function breakBlock() {
-    const hit = raycastBlock(); if (!hit) return;
-    if (getB(hit.x, hit.y, hit.z) === BEDROCK) return;
-    setB(hit.x, hit.y, hit.z, AIR);
-    bcast('block', { x:hit.x, y:hit.y, z:hit.z, v:AIR });
-    worldDirty = true;
+  // ── Mining (hold left button, crack progresses, block breaks at 100%) ────
+  let mouseDownLeft = false;
+  let mining = null; // { x, y, z, timer, total }
+
+  function updateMining(dt) {
+    const hit = raycastBlock();
+
+    // Selection outline always tracks the targeted block
+    if (hit) {
+      selectMesh.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+      selectMesh.visible = true;
+    } else {
+      selectMesh.visible = false;
+    }
+
+    // Cancel mining if mouse released, no target, or different block
+    if (!mouseDownLeft || !hit ||
+        (mining && (mining.x !== hit.x || mining.y !== hit.y || mining.z !== hit.z))) {
+      mining = null;
+      crackMesh.visible = false;
+      if (!mouseDownLeft || !hit) return;
+    }
+
+    // Start mining if not already
+    if (!mining) {
+      const blk = getB(hit.x, hit.y, hit.z);
+      const total = BREAK_TIME[blk];
+      if (!total || total === Infinity) return;
+      mining = { x: hit.x, y: hit.y, z: hit.z, timer: 0, total };
+    }
+
+    mining.timer += dt;
+    const progress = mining.timer / mining.total;
+
+    // Update crack texture (10 stages)
+    const stage = Math.min(9, Math.floor(progress * 10));
+    crackMat.map = crackTextures[stage];
+    crackMat.needsUpdate = true;
+    crackMesh.position.set(mining.x + 0.5, mining.y + 0.5, mining.z + 0.5);
+    crackMesh.visible = true;
+
+    // Block broke
+    if (progress >= 1) {
+      setB(mining.x, mining.y, mining.z, AIR);
+      bcast('block', { x: mining.x, y: mining.y, z: mining.z, v: AIR });
+      worldDirty = true;
+      mining = null;
+      crackMesh.visible = false;
+    }
   }
 
   function placeBlock() {
@@ -470,6 +545,12 @@
   document.addEventListener('pointerlockchange', () => {
     pointerLocked = document.pointerLockElement === canvas;
     document.getElementById('lockHint').style.display = (running && !pointerLocked) ? 'block' : 'none';
+    if (!pointerLocked) {
+      mouseDownLeft = false;
+      mining = null;
+      crackMesh.visible = false;
+      selectMesh.visible = false;
+    }
   });
   document.addEventListener('mousemove', e => {
     if (!pointerLocked) return;
@@ -481,8 +562,15 @@
   });
   document.addEventListener('mousedown', e => {
     if (!pointerLocked) return;
-    if (e.button === 0) breakBlock();
+    if (e.button === 0) mouseDownLeft = true;
     else if (e.button === 2) placeBlock();
+  });
+  document.addEventListener('mouseup', e => {
+    if (e.button === 0) {
+      mouseDownLeft = false;
+      mining = null;
+      crackMesh.visible = false;
+    }
   });
   document.addEventListener('contextmenu', e => { if (pointerLocked) e.preventDefault(); });
 
@@ -584,6 +672,7 @@
     if (!running) return;
     const dt = Math.min((now - last) / 1000, 0.05); last = now;
     tick(dt);
+    updateMining(dt);
     if (worldDirty) { buildMeshes(); worldDirty = false; }
     moveBcastTimer += dt;
     if (moveBcastTimer > 0.05) {
