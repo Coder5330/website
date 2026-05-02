@@ -110,7 +110,7 @@ async function saveGame() {
     console.error('save error:', error);
     return;
   }
-  if (!saved) { status.textContent = '⛔ stop cheating'; status.className = ''; return; }
+  if (saved === false) { status.textContent = '⛔ stop cheating'; status.className = ''; return; }
   status.textContent = '⬤ saved';
   status.className = 'saved';
   setTimeout(() => { status.textContent = '⬤ saved'; status.className = ''; }, 2000);
