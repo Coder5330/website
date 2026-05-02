@@ -62,7 +62,11 @@ body {
   box-shadow: 0 0 8px rgba(255,230,109,0.6);
 }
 #hotbar .swatch {
-  width: 28px; height: 28px;
+  width: 32px; height: 32px;
+  background-size: cover;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
   border: 1px solid rgba(0,0,0,0.4);
   border-radius: 2px;
 }
