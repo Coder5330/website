@@ -93,38 +93,38 @@ function saveScore(served, spills, timeLeft) {
   return scores;
 }
 
-function renderLeaderboard(scores, highlightIdx) {
-  if (!scores.length) return '';
-  const rows = scores.map((s, i) => {
-    const hl = i === highlightIdx ? ' style="color:#ffe66d;font-weight:bold;"' : '';
-    return `<tr${hl}><td>${i + 1}</td><td>${s.served}</td><td>${s.spills}</td><td>${s.timeLeft}s</td><td>${s.date}</td></tr>`;
-  }).join('');
-  return `
-    <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;">
-      <thead><tr style="opacity:0.6"><th>#</th><th>Served</th><th>Spills</th><th>Time left</th><th>Date</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+async function renderLeaderboard(myServed) {
+  try {
+    const { data, error } = await sb.rpc('get_leaderboard', { p_game: 'slushie' });
+    if (error || !data?.length) return '<p style="opacity:0.6;margin-top:12px;">No scores yet.</p>';
+    const rows = data.map((s, i) => {
+      const hl = s.payload.served === myServed ? ' style="color:#ffe66d;font-weight:bold;"' : '';
+      return `<tr${hl}><td>${i+1}</td><td>${s.display_name}</td><td>${s.payload.served}</td><td>${s.payload.spills}</td><td>${s.payload.timeLeft}s</td></tr>`;
+    }).join('');
+    return `<table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;">
+      <thead><tr style="opacity:0.6"><th>#</th><th>Player</th><th>Served</th><th>Spills</th><th>Left</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  } catch { return ''; }
 }
 
-function end(message) {
+async function end(message) {
   state.running = false;
   keysHeld.clear();
   state.slots.forEach((s, i) => stopDispense(i));
-  const scores = saveScore(state.served, state.spills, state.timeLeft);
-  const highlightIdx = scores.findIndex(s =>
-    s.served === state.served && s.spills === state.spills &&
-    s.timeLeft === parseFloat(state.timeLeft.toFixed(1))
-  );
+  saveScore(state.served, state.spills, state.timeLeft);
   overlay.querySelector('.panel').innerHTML = `
     <h1>${message}</h1>
     <p>Cups served: <b>${state.served}</b> / ${CONFIG.totalCups}</p>
     <p>Spills: <b>${state.spills}</b> &nbsp;|&nbsp; Time left: <b>${state.timeLeft.toFixed(1)}s</b></p>
     <h2 style="margin-top:14px;font-size:18px;color:#ffe66d;">Leaderboard</h2>
-    ${renderLeaderboard(scores, highlightIdx)}
+    <p id="lb-loading" style="opacity:0.6">Loading…</p>
     <button id="startBtn" style="margin-top:18px;">Play Again</button>
   `;
   overlay.classList.add('show');
   document.getElementById('startBtn').addEventListener('click', start);
+  const lb = await renderLeaderboard(state.served);
+  const loading = document.getElementById('lb-loading');
+  if (loading) loading.outerHTML = lb;
 }
 
 function pickSize() {

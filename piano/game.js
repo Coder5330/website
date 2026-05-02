@@ -198,21 +198,26 @@
     localStorage.setItem(LB_KEY, JSON.stringify(scores.slice(0, 10)));
   }
 
-  function renderLeaderboard() {
+  async function renderLeaderboard() {
     const list = document.getElementById('scoreList');
-    list.innerHTML = '';
-    const scores = loadScores();
-    if (scores.length === 0) {
-      const li = document.createElement('li');
-      li.className = 'empty';
-      li.textContent = 'No scores yet — be the first!';
-      list.appendChild(li);
-      return;
-    }
-    for (const s of scores) {
-      const li = document.createElement('li');
-      li.innerHTML = `<span class="name">${escapeHtml(s.name)}</span><span class="score">${s.score}</span>`;
-      list.appendChild(li);
+    list.innerHTML = '<li class="empty">Loading…</li>';
+    try {
+      const { data, error } = await sb.rpc('get_leaderboard', { p_game: 'piano' });
+      list.innerHTML = '';
+      if (error || !data?.length) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = 'No scores yet — be the first!';
+        list.appendChild(li);
+        return;
+      }
+      for (const s of data) {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="name">${escapeHtml(s.display_name)}</span><span class="score">${s.payload.score}</span>`;
+        list.appendChild(li);
+      }
+    } catch {
+      list.innerHTML = '<li class="empty">Could not load leaderboard.</li>';
     }
   }
 
