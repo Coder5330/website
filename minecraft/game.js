@@ -66,25 +66,22 @@
   atlasTex.colorSpace = THREE.SRGBColorSpace;
   // flipY default true: image's top row → V=1
 
-  // Each block id occupies a 384×128 horizontal strip; layer 0 (sand) is at top.
-  // After Python flip_x: tile order is TOP | SIDE | BOTTOM (left→right).
-  // With flipY=true atlas, the strip for block id (1..7) is:
-  //   V range: vMax = (ATLAS_LAYERS - (id-1)) / ATLAS_LAYERS,   vMin = vMax - 1/ATLAS_LAYERS
-  // Within that strip:
-  //   TOP face    → U: [0,    1/3]
-  //   SIDE faces  → U: [1/3,  2/3]
-  //   BOTTOM face → U: [2/3,  1  ]
+  // Atlas layout (file): 8 layers stacked vertically; layer 0 is empty (AIR=0).
+  // Block id N lives at file Y = N*128 .. (N+1)*128.
+  // Within each strip, file order (left→right) is: BOTTOM | SIDE | TOP.
+  // (Python applies flip_x at load; we use the raw file, so we DON'T mirror.)
+  // With default flipY=true, file Y maps to V: vMax = (8-id)/8, vMin = (7-id)/8.
   function makeBlockGeo(id) {
     const g = new THREE.BoxGeometry(1, 1, 1);
     const uvs = g.attributes.uv.array;
-    const vMax = (ATLAS_LAYERS - (id - 1)) / ATLAS_LAYERS;
+    const vMax = (ATLAS_LAYERS - id) / ATLAS_LAYERS;
     const vMin = vMax - 1 / ATLAS_LAYERS;
     // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z
     const uRanges = [
       [1/3, 2/3], // +X side
       [1/3, 2/3], // -X side
-      [0,   1/3], // +Y top
-      [2/3, 1],   // -Y bottom
+      [2/3, 1  ], // +Y top    → right tile
+      [0,   1/3], // -Y bottom → left tile
       [1/3, 2/3], // +Z side
       [1/3, 2/3], // -Z side
     ];
@@ -224,23 +221,31 @@
     return new THREE.Vector3(WX/2, WY/2, WZ/2);
   }
 
-  // ── Collision (Python-style: check 3 Y offsets × 4 corners) ──────────────
-  function collides(x, y, z) {
-    const ys = [y + 0.05, y + 0.9, y + 1.75];
+  // ── Collision (4 corners × 3 Y offsets through player body) ─────────────
+  function collidesAt(x, y, z) {
+    const ys = [y + 0.05, y + 0.9, y + PH - 0.05];
     for (const dx of [-PW, PW]) for (const dz of [-PW, PW]) for (const py of ys) {
       if (isSolidAt(Math.floor(x+dx), Math.floor(py), Math.floor(z+dz))) return true;
     }
     return false;
   }
 
+  // Standing-on-block check: probe block immediately under feet
+  function isGrounded(x, y, z) {
+    const fy = Math.floor(y - 0.02);
+    for (const dx of [-PW, PW]) for (const dz of [-PW, PW]) {
+      if (isSolidAt(Math.floor(x+dx), fy, Math.floor(z+dz))) return true;
+    }
+    return false;
+  }
+
   // ── Tick ────────────────────────────────────────────────────────────────
   function tick(dt) {
-    // Camera-relative input (yaw rotates around Y, +Y up; -Z is forward at yaw=0)
+    // Camera-relative input
     const f = (inputKeys.fwd?1:0)  - (inputKeys.back?1:0);
     const r = (inputKeys.right?1:0) - (inputKeys.left?1:0);
     let dxn = 0, dzn = 0;
     if (f || r) {
-      // Forward in world: (-sin yaw, 0, -cos yaw); Right: (cos yaw, 0, -sin yaw)
       const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
       dxn = -f * sy + r * cy;
       dzn = -f * cy - r * sy;
@@ -248,36 +253,52 @@
       if (len > 0) { dxn /= len; dzn /= len; }
     }
     const speed = (inputKeys.sprint && f > 0) ? SPRINT : WALK;
-    const vx = dxn * speed;
-    const vz = dzn * speed;
+    const vx = dxn * speed, vz = dzn * speed;
 
     // Horizontal — axis-by-axis, slide on walls
     const newX = player.pos.x + vx * dt;
-    if (!collides(newX, player.pos.y, player.pos.z)) player.pos.x = newX;
+    if (!collidesAt(newX, player.pos.y, player.pos.z)) player.pos.x = newX;
     const newZ = player.pos.z + vz * dt;
-    if (!collides(player.pos.x, player.pos.y, newZ)) player.pos.z = newZ;
+    if (!collidesAt(player.pos.x, player.pos.y, newZ)) player.pos.z = newZ;
 
-    // Gravity + jump
-    player.vy = Math.max(player.vy + GRAVITY * dt, -MAX_FALL);
-    if (inputKeys.jump && player.grounded) {
+    // Update grounded BEFORE applying gravity (prevents accumulation = bouncing)
+    const wasGrounded = isGrounded(player.pos.x, player.pos.y, player.pos.z);
+
+    // Jump
+    if (inputKeys.jump && wasGrounded) {
       player.vy = JUMP_VEL;
       player.grounded = false;
-    }
-    let newY = player.pos.y + player.vy * dt;
-    if (collides(player.pos.x, newY, player.pos.z)) {
-      // Snap to nearest non-colliding integer boundary
-      if (player.vy < 0) {
-        newY = Math.ceil(newY);
-        player.grounded = true;
-      } else {
-        newY = Math.floor(newY + 1.8) - 1.8;
-      }
+    } else if (wasGrounded && player.vy <= 0) {
+      // Sitting on the ground: clamp velocity and snap to integer Y
       player.vy = 0;
+      player.grounded = true;
+      const snapY = Math.round(player.pos.y);
+      if (Math.abs(player.pos.y - snapY) < 0.06 && !collidesAt(player.pos.x, snapY, player.pos.z)) {
+        player.pos.y = snapY;
+      }
     } else {
-      // Detect grounded by probing 0.05 below feet
-      player.grounded = collides(player.pos.x, newY - 0.05, player.pos.z);
+      // In air → apply gravity
+      player.vy = Math.max(player.vy + GRAVITY * dt, -MAX_FALL);
+      player.grounded = false;
     }
-    player.pos.y = newY;
+
+    // Move Y
+    if (player.vy !== 0) {
+      const newY = player.pos.y + player.vy * dt;
+      if (collidesAt(player.pos.x, newY, player.pos.z)) {
+        if (player.vy < 0) {
+          // Hit floor — snap up to top of block we landed on
+          player.pos.y = Math.ceil(newY);
+          player.grounded = true;
+        } else {
+          // Hit ceiling — snap down so head is just below block
+          player.pos.y = Math.floor(newY + PH) - PH - 0.001;
+        }
+        player.vy = 0;
+      } else {
+        player.pos.y = newY;
+      }
+    }
 
     if (player.pos.y < -10) {
       const sp = findSpawn();
@@ -495,17 +516,16 @@
   // Build small swatch images sampled from the side-tile of each block in atlas
   const hotbarThumbs = {};
   function makeThumbs(image) {
-    const layerH = image.height / ATLAS_LAYERS;       // 128
-    const tileW  = image.width / 3;                   // 128
+    const layerH = image.height / ATLAS_LAYERS; // 128
+    const tileW  = image.width / 3;             // 128
     for (const id of HOTBAR) {
       const c = document.createElement('canvas');
       c.width = c.height = 32;
       const cx = c.getContext('2d');
       cx.imageSmoothingEnabled = false;
-      // For grass, show TOP tile; otherwise show SIDE tile so it's recognizable
-      const useTop = (id === GRASS);
-      const sx = useTop ? 0 : tileW;
-      const sy = (id - 1) * layerH;
+      // Show the SIDE tile (middle) so blocks look like blocks; sy uses raw layer index = id
+      const sx = tileW;            // middle tile = side
+      const sy = id * layerH;      // block id N is at file Y = N * 128
       cx.drawImage(image, sx, sy, tileW, layerH, 0, 0, 32, 32);
       hotbarThumbs[id] = c.toDataURL();
     }
