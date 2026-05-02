@@ -65,7 +65,26 @@ function start() {
   requestAnimationFrame(loop);
 }
 
+async function saveToSupabase(served, spills, timeLeft) {
+  if (typeof sb === 'undefined') return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data } = await sb.from('scores').select('payload')
+    .eq('player_id', session.user.id).eq('game', 'slushie').maybeSingle();
+  const ex = data?.payload;
+  if (ex) {
+    if (ex.served > served) return;
+    if (ex.served === served && ex.timeLeft > timeLeft) return;
+    if (ex.served === served && ex.timeLeft === timeLeft && ex.spills <= spills) return;
+  }
+  await sb.from('scores').upsert({
+    player_id: session.user.id, game: 'slushie',
+    payload: { served, spills, timeLeft: parseFloat(timeLeft.toFixed(1)) }
+  }, { onConflict: 'player_id,game' });
+}
+
 function saveScore(served, spills, timeLeft) {
+  saveToSupabase(served, spills, timeLeft);
   const scores = JSON.parse(localStorage.getItem('slushieScores') || '[]');
   scores.push({ served, spills, timeLeft: parseFloat(timeLeft.toFixed(1)), date: new Date().toLocaleDateString() });
   scores.sort((a, b) => b.served - a.served || b.timeLeft - a.timeLeft || a.spills - b.spills);

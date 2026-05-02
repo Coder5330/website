@@ -177,7 +177,21 @@
     }
   }
 
+  async function saveToSupabase(scoreVal) {
+    if (typeof sb === 'undefined') return;
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const { data } = await sb.from('scores').select('payload')
+      .eq('player_id', session.user.id).eq('game', 'piano').maybeSingle();
+    if (data?.payload?.score >= scoreVal) return;
+    await sb.from('scores').upsert({
+      player_id: session.user.id, game: 'piano',
+      payload: { score: scoreVal }
+    }, { onConflict: 'player_id,game' });
+  }
+
   function saveScore(name, scoreVal) {
+    saveToSupabase(scoreVal);
     const scores = loadScores();
     scores.push({ name, score: scoreVal, date: Date.now() });
     scores.sort((a, b) => b.score - a.score);
