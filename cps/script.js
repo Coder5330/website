@@ -7,6 +7,7 @@ let timer = null;
 let startTime = null;
 let clickCount = 0;
 let DURATION = 10;
+let cheaterBlocked = false;
 
 const buttons = [1, 2, 5, 10, 30, 60, 100].map(n => document.getElementById("s" + n));
 
@@ -40,12 +41,13 @@ async function saveCpsScore(cpsValue, duration) {
     p_cps: parseFloat(cpsValue.toFixed(2))
   });
   if (error) { console.error('save error:', error); status.textContent = '⬤ error'; status.className = ''; return; }
-  if (saved === false) { alert('STTTOPPP CHEATTTING'); status.textContent = '⛔ cheater'; status.className = ''; return; }
+  if (saved === false) { cheaterBlocked = true; alert('STTTOPPP CHEATTTING'); status.textContent = '⛔ cheater'; status.className = ''; return; }
   status.textContent = '⬤ saved';
   status.className = 'saved';
 }
 
 canvas.addEventListener("click", () => {
+    if (cheaterBlocked) return;
     if (timer === null) {
         startTime = Date.now();
         canvas.querySelector("p").textContent = "";

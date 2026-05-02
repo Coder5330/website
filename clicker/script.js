@@ -110,7 +110,7 @@ async function saveGame() {
     console.error('save error:', error);
     return;
   }
-  if (saved === false) { alert('STTTOPPP CHEATTTING'); status.textContent = '⛔ cheater'; status.className = ''; return; }
+  if (saved === false) { cheaterBlocked = true; alert('STTTOPPP CHEATTTING'); status.textContent = '⛔ cheater'; status.className = ''; return; }
   status.textContent = '⬤ saved';
   status.className = 'saved';
   setTimeout(() => { status.textContent = '⬤ saved'; status.className = ''; }, 2000);
@@ -160,6 +160,7 @@ let score = 0;
 let gps = 0;
 let gpc = 1;
 let gpsMultiplier = 1;
+let cheaterBlocked = false;
 const purchasedMults = new Set();
 const buyCounts = {};
 
@@ -209,6 +210,7 @@ updateButtons();
 loadGame();
 
 cookie.addEventListener("click", () => {
+  if (cheaterBlocked) return;
   score += gpc;
   updateDisplay();
 });
@@ -267,6 +269,6 @@ upgrades.forEach(up => {
   });
 });
 
-setInterval(() => { score += (gps * gpsMultiplier) / 60; }, 1000 / 60);
+setInterval(() => { if (!cheaterBlocked) score += (gps * gpsMultiplier) / 60; }, 1000 / 60);
 setInterval(updateDisplay, 100);
 setInterval(() => { if (gameLoaded) saveGame(); }, 1000);
