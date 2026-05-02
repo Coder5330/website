@@ -2,19 +2,83 @@
   // ── Block IDs (match settings.py) ────────────────────────────────────────
   const AIR=0, SAND=1, GRASS=2, DIRT=3, STONE=4, SNOW=5, LEAVES=6, WOOD=7, WATER=8;
   const BEDROCK = 9;
+  const COAL_ORE=12, IRON_ORE=13, COPPER_ORE=14, GOLD_ORE=15, REDSTONE_ORE=16, DIAMOND_ORE=17;
+  const ORES = [COAL_ORE, IRON_ORE, COPPER_ORE, GOLD_ORE, REDSTONE_ORE, DIAMOND_ORE];
   const ALL_BLOCKS = [SAND, GRASS, DIRT, STONE, SNOW, LEAVES, WOOD];
-  const SOLID = new Set([SAND,GRASS,DIRT,STONE,SNOW,LEAVES,WOOD,BEDROCK]); // water excluded
+  const SOLID = new Set([SAND,GRASS,DIRT,STONE,SNOW,LEAVES,WOOD,BEDROCK,
+                         COAL_ORE,IRON_ORE,COPPER_ORE,GOLD_ORE,REDSTONE_ORE,DIAMOND_ORE]);
 
   // World dims
   const WX=64, WY=40, WZ=64;
   const SEA_LEVEL = 9;
   const ATLAS_LAYERS = 8;
 
-  // Hand-mining times (s)
+  // ── Tool items ───────────────────────────────────────────────────────────
+  const ITEM_WOOD_PICK=101, ITEM_STONE_PICK=102, ITEM_IRON_PICK=103, ITEM_DIAMOND_PICK=104;
+  const ITEM_WOOD_AXE=111,  ITEM_STONE_AXE=112,  ITEM_IRON_AXE=113,  ITEM_DIAMOND_AXE=114;
+  const ITEM_WOOD_SHOVEL=121, ITEM_STONE_SHOVEL=122, ITEM_IRON_SHOVEL=123;
+  const ITEM_WOOD_SWORD=131, ITEM_STONE_SWORD=132, ITEM_IRON_SWORD=133, ITEM_DIAMOND_SWORD=134;
+
+  const TOOLS = {
+    [ITEM_WOOD_PICK]:    { kind:'pickaxe', tier:1, name:'Wood Pickaxe',    img:'assets/woodenpickaxe.png' },
+    [ITEM_STONE_PICK]:   { kind:'pickaxe', tier:2, name:'Stone Pickaxe',   img:'assets/stonepickaxe.png' },
+    [ITEM_IRON_PICK]:    { kind:'pickaxe', tier:3, name:'Iron Pickaxe',    img:'assets/ironpickaxe.jpg' },
+    [ITEM_DIAMOND_PICK]: { kind:'pickaxe', tier:4, name:'Diamond Pickaxe', img:'assets/diamondpickaxe.png' },
+    [ITEM_WOOD_AXE]:     { kind:'axe',     tier:1, name:'Wood Axe',        img:'assets/woodenaxe.jpg' },
+    [ITEM_STONE_AXE]:    { kind:'axe',     tier:2, name:'Stone Axe',       img:'assets/stoneaxe.jpg' },
+    [ITEM_IRON_AXE]:     { kind:'axe',     tier:3, name:'Iron Axe',        img:'assets/ironaxe.png' },
+    [ITEM_DIAMOND_AXE]:  { kind:'axe',     tier:4, name:'Diamond Axe',     img:'assets/diamondaxe.png' },
+    [ITEM_WOOD_SHOVEL]:  { kind:'shovel',  tier:1, name:'Wood Shovel',     img:'assets/woodenshovel.jpg' },
+    [ITEM_STONE_SHOVEL]: { kind:'shovel',  tier:2, name:'Stone Shovel',    img:'assets/stoneshovel.jpg' },
+    [ITEM_IRON_SHOVEL]:  { kind:'shovel',  tier:3, name:'Iron Shovel',     img:'assets/ironshovel.jpg' },
+    [ITEM_WOOD_SWORD]:   { kind:'sword',   tier:1, name:'Wood Sword',      img:'assets/woodensword.jpg' },
+    [ITEM_STONE_SWORD]:  { kind:'sword',   tier:2, name:'Stone Sword',     img:'assets/stonesword.png' },
+    [ITEM_IRON_SWORD]:   { kind:'sword',   tier:3, name:'Iron Sword',      img:'assets/ironsword.png' },
+    [ITEM_DIAMOND_SWORD]:{ kind:'sword',   tier:4, name:'Diamond Sword',   img:'assets/diamondsword.png' },
+  };
+
+  // What tool each block prefers + minimum tier required to drop
+  const BLOCK_TOOL = {
+    [SAND]:'shovel', [DIRT]:'shovel', [GRASS]:'shovel', [SNOW]:'shovel',
+    [WOOD]:'axe',    [LEAVES]:'sword',
+    [STONE]:'pickaxe', [COAL_ORE]:'pickaxe', [IRON_ORE]:'pickaxe',
+    [COPPER_ORE]:'pickaxe', [GOLD_ORE]:'pickaxe',
+    [DIAMOND_ORE]:'pickaxe', [REDSTONE_ORE]:'pickaxe',
+  };
+  const BLOCK_MIN_TIER = {
+    [STONE]:1, [COAL_ORE]:1,
+    [IRON_ORE]:2, [COPPER_ORE]:2,
+    [GOLD_ORE]:3, [DIAMOND_ORE]:3, [REDSTONE_ORE]:3,
+  };
+
+  // Hand-mining times (s) — straight from voxel_handler.py
   const BREAK_TIME = {
     [SAND]: 0.75, [GRASS]: 0.9, [DIRT]: 0.75, [STONE]: 7.5,
-    [SNOW]: 0.5,  [LEAVES]: 0.3, [WOOD]: 3.0, [BEDROCK]: Infinity,
+    [SNOW]: 0.5,  [LEAVES]: 0.3, [WOOD]: 3.0,
+    [COAL_ORE]: 7.5, [IRON_ORE]: 15, [COPPER_ORE]: 15,
+    [GOLD_ORE]: 15, [DIAMOND_ORE]: 15, [REDSTONE_ORE]: 15,
+    [BEDROCK]: Infinity,
   };
+  // Speed multipliers per tier when the tool kind matches the block
+  const TIER_SPEED = [1, 6, 9, 13, 18];
+
+  function getSelectedTool() {
+    const slot = hotbar[hotbarSlot];
+    return (slot && slot.kind === 'tool') ? slot.id : null;
+  }
+  function getMineTime(block, itemId) {
+    const base = BREAK_TIME[block] ?? 1.0;
+    if (itemId == null) return base;
+    const t = TOOLS[itemId];
+    if (!t || t.kind !== BLOCK_TOOL[block]) return base;
+    return base / TIER_SPEED[t.tier];
+  }
+  function canHarvest(block, itemId) {
+    const minTier = BLOCK_MIN_TIER[block] || 0;
+    if (minTier === 0) return true;
+    const t = itemId != null ? TOOLS[itemId] : null;
+    return !!(t && t.kind === BLOCK_TOOL[block] && t.tier >= minTier);
+  }
 
   // ── Physics ──────────────────────────────────────────────────────────────
   const WALK = 4.5;
@@ -33,9 +97,10 @@
   const player = { pos: new THREE.Vector3(0,0,0), vy:0, grounded:false, yaw:0, pitch:0 };
   const inputKeys = { fwd:false, back:false, left:false, right:false, jump:false, sprint:false };
 
-  // Inventory: 9 slots, each null or { block, count }
+  // Inventory: 9 slots, each null | {kind:'block', block, count} | {kind:'tool', id}
   const HOTBAR_SIZE = 9;
   const hotbar = Array(HOTBAR_SIZE).fill(null);
+  const blockThumbs = {}; // populated by atlas + ore loaders
 
   // ── Three.js ─────────────────────────────────────────────────────────────
   const canvas = document.getElementById('mcCanvas');
@@ -108,6 +173,44 @@
   const waterMaterial = new THREE.MeshLambertMaterial({
     map: waterTex, color: 0x99ccff, transparent: true, opacity: 0.78, depthWrite: false,
   });
+
+  // ── Ore textures from tex_array_1.png (4×2 grid of 64×64 tiles) ──────────
+  // Tile order in file (row-major): coal, iron, gold, diamond, lapis, redstone, emerald, copper
+  const oreMaterials = {};
+  const oreTileIndex = {
+    [COAL_ORE]: 0, [IRON_ORE]: 1, [GOLD_ORE]: 2, [DIAMOND_ORE]: 3,
+    [REDSTONE_ORE]: 5, [COPPER_ORE]: 7,
+  };
+  for (const id of ORES) blockGeos[id] = new THREE.BoxGeometry(1, 1, 1);
+  const oreImg = new Image();
+  oreImg.onload = () => {
+    const tileW = oreImg.width / 4;
+    const tileH = oreImg.height / 2;
+    for (const idStr of Object.keys(oreTileIndex)) {
+      const id = +idStr;
+      const tIdx = oreTileIndex[id];
+      const col = tIdx % 4, row = Math.floor(tIdx / 4);
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      const cx = c.getContext('2d');
+      cx.imageSmoothingEnabled = false;
+      cx.drawImage(oreImg, col*tileW, row*tileH, tileW, tileH, 0, 0, 64, 64);
+      const tex = new THREE.CanvasTexture(c);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      oreMaterials[id] = new THREE.MeshLambertMaterial({ map: tex });
+      // Hotbar thumbnail
+      const tc = document.createElement('canvas');
+      tc.width = tc.height = 32;
+      const tcx = tc.getContext('2d');
+      tcx.imageSmoothingEnabled = false;
+      tcx.drawImage(oreImg, col*tileW, row*tileH, tileW, tileH, 0, 0, 32, 32);
+      blockThumbs[id] = tc.toDataURL();
+    }
+    if (running) { worldDirty = true; updateHotbarUI(); }
+  };
+  oreImg.src = 'assets/tex_array_1.png';
 
   // ── Crack textures ───────────────────────────────────────────────────────
   const crackTextures = [];
@@ -182,7 +285,9 @@
     for (const idStr of Object.keys(counts)) {
       const id = +idStr;
       const geo = blockGeos[id] || blockGeos[STONE];
-      const mat = (id === WATER) ? waterMaterial : blockMaterial;
+      const mat = (id === WATER) ? waterMaterial
+                : (oreMaterials[id]) ? oreMaterials[id]
+                : blockMaterial;
       const mesh = new THREE.InstancedMesh(geo, mat, counts[id]);
       let i = 0;
       for (let y=0; y<WY; y++) for (let z=0; z<WZ; z++) for (let x=0; x<WX; x++) {
@@ -256,6 +361,32 @@
     // Fill all air ≤ SEA_LEVEL with water
     for (let z=0; z<WZ; z++) for (let x=0; x<WX; x++) {
       for (let y=0; y<=SEA_LEVEL; y++) if (getB(x,y,z) === AIR) setB(x,y,z, WATER);
+    }
+    // Scatter ore veins inside stone
+    const oreSpec = [
+      { id: COAL_ORE,     minY: 4,  maxY: 32, count: 90, vein: 5 },
+      { id: COPPER_ORE,   minY: 4,  maxY: 28, count: 50, vein: 5 },
+      { id: IRON_ORE,     minY: 3,  maxY: 24, count: 65, vein: 4 },
+      { id: GOLD_ORE,     minY: 2,  maxY: 14, count: 22, vein: 4 },
+      { id: REDSTONE_ORE, minY: 2,  maxY: 12, count: 24, vein: 5 },
+      { id: DIAMOND_ORE,  minY: 2,  maxY:  9, count: 14, vein: 3 },
+    ];
+    for (const spec of oreSpec) {
+      for (let i = 0; i < spec.count; i++) {
+        let cx = Math.floor(rng()*WX);
+        let cy = spec.minY + Math.floor(rng() * (spec.maxY - spec.minY + 1));
+        let cz = Math.floor(rng()*WZ);
+        for (let v = 0; v < spec.vein; v++) {
+          if (getB(cx,cy,cz) === STONE) setB(cx,cy,cz, spec.id);
+          const dir = Math.floor(rng()*6);
+          if      (dir===0 && cx>0)    cx--;
+          else if (dir===1 && cx<WX-1) cx++;
+          else if (dir===2 && cy>1)    cy--;
+          else if (dir===3 && cy<WY-1) cy++;
+          else if (dir===4 && cz>0)    cz--;
+          else if (dir===5 && cz<WZ-1) cz++;
+        }
+      }
     }
   }
 
@@ -343,15 +474,30 @@
     if (inWaterNow) speed *= 0.6;
     const vx = dxn * speed, vz = dzn * speed;
 
+    // Auto step-up: if blocked horizontally but a 1-block ledge is climbable
+    // (always when in water — needed to get out — and otherwise when grounded)
+    let wasGrounded = isGrounded(player.pos.x, player.pos.y, player.pos.z);
     const newX = player.pos.x + vx * dt;
     if (!collidesAt(newX, player.pos.y, player.pos.z)) player.pos.x = newX;
+    else if ((wasGrounded || inWaterNow) && !collidesAt(newX, player.pos.y + 1.0, player.pos.z)
+             && !collidesAt(player.pos.x, player.pos.y + 1.0, player.pos.z)) {
+      player.pos.x = newX; player.pos.y += 1.0;
+    }
     const newZ = player.pos.z + vz * dt;
     if (!collidesAt(player.pos.x, player.pos.y, newZ)) player.pos.z = newZ;
+    else if ((wasGrounded || inWaterNow) && !collidesAt(player.pos.x, player.pos.y + 1.0, newZ)
+             && !collidesAt(player.pos.x, player.pos.y + 1.0, player.pos.z)) {
+      player.pos.z = newZ; player.pos.y += 1.0;
+    }
 
-    const wasGrounded = isGrounded(player.pos.x, player.pos.y, player.pos.z);
+    wasGrounded = isGrounded(player.pos.x, player.pos.y, player.pos.z);
 
-    if (inputKeys.jump && (wasGrounded || inWaterNow)) {
-      player.vy = inWaterNow ? JUMP_VEL * 0.55 : JUMP_VEL;
+    if (inputKeys.jump && wasGrounded) {
+      player.vy = JUMP_VEL;
+      player.grounded = false;
+    } else if (inputKeys.jump && inWaterNow) {
+      // Sustained swim-up while space is held
+      player.vy = Math.max(player.vy, 4.0);
       player.grounded = false;
     } else if (wasGrounded && player.vy <= 0) {
       player.vy = 0; player.grounded = true;
@@ -427,9 +573,10 @@
     }
     if (!mining) {
       const blk = getB(hit.x, hit.y, hit.z);
-      const total = BREAK_TIME[blk];
+      const tool = getSelectedTool();
+      const total = getMineTime(blk, tool);
       if (!total || total === Infinity) return;
-      mining = { x: hit.x, y: hit.y, z: hit.z, timer: 0, total, block: blk };
+      mining = { x: hit.x, y: hit.y, z: hit.z, timer: 0, total, block: blk, tool };
     }
     mining.timer += dt;
     const progress = mining.timer / mining.total;
@@ -444,9 +591,8 @@
       setB(bx, by, bz, AIR);
       bcast('block', { x: bx, y: by, z: bz, v: AIR });
       worldDirty = true;
-      // Drop the block
-      spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk);
-      // Settle water if mining near water (host only — guests get block events)
+      // Only drop if the tool was sufficient to harvest
+      if (canHarvest(blk, mining.tool)) spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk);
       if (isHost) {
         const changes = settleWater();
         for (const [cx, cy, cz] of changes) bcast('block', { x:cx, y:cy, z:cz, v:WATER });
@@ -459,7 +605,7 @@
   function placeBlock() {
     const hit = raycastBlock(); if (!hit) return;
     const slot = hotbar[hotbarSlot];
-    if (!slot || slot.count <= 0) return;
+    if (!slot || slot.kind !== 'block' || slot.count <= 0) return;
     const px = hit.x + hit.normal[0], py = hit.y + hit.normal[1], pz = hit.z + hit.normal[2];
     if (px<0||px>=WX||py<0||py>=WY||pz<0||pz>=WZ) return;
     const cur = getB(px, py, pz);
@@ -484,7 +630,9 @@
     const baseGeo = blockGeos[blockId] || blockGeos[STONE];
     const geo = baseGeo.clone();
     geo.scale(0.32, 0.32, 0.32);
-    const mat = (blockId === WATER) ? waterMaterial : blockMaterial;
+    const mat = (blockId === WATER)         ? waterMaterial
+              : (oreMaterials[blockId])     ? oreMaterials[blockId]
+              : blockMaterial;
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(x, y, z);
     scene.add(mesh);
@@ -564,12 +712,26 @@
   // ── Inventory ────────────────────────────────────────────────────────────
   function addToInventory(blockId) {
     for (let i = 0; i < HOTBAR_SIZE; i++) {
-      if (hotbar[i]?.block === blockId) { hotbar[i].count++; updateHotbarUI(); return true; }
+      if (hotbar[i]?.kind === 'block' && hotbar[i].block === blockId) {
+        hotbar[i].count++; updateHotbarUI(); return true;
+      }
     }
     for (let i = 0; i < HOTBAR_SIZE; i++) {
-      if (!hotbar[i]) { hotbar[i] = { block: blockId, count: 1 }; updateHotbarUI(); return true; }
+      if (!hotbar[i]) {
+        hotbar[i] = { kind: 'block', block: blockId, count: 1 };
+        updateHotbarUI(); return true;
+      }
     }
     return false;
+  }
+  function giveStartingTools() {
+    hotbar[0] = { kind:'tool', id: ITEM_WOOD_PICK };
+    hotbar[1] = { kind:'tool', id: ITEM_STONE_PICK };
+    hotbar[2] = { kind:'tool', id: ITEM_IRON_PICK };
+    hotbar[3] = { kind:'tool', id: ITEM_DIAMOND_PICK };
+    hotbar[4] = { kind:'tool', id: ITEM_IRON_AXE };
+    hotbar[5] = { kind:'tool', id: ITEM_IRON_SHOVEL };
+    hotbar[6] = { kind:'tool', id: ITEM_DIAMOND_SWORD };
   }
 
   // ── Other players ────────────────────────────────────────────────────────
@@ -733,7 +895,6 @@
   }, { passive: false });
 
   // ── Hotbar UI (counts; sample texture from atlas) ────────────────────────
-  const blockThumbs = {};
   function makeThumbs(image) {
     const layerH = image.height / ATLAS_LAYERS;
     const tileW  = image.width / 3;
@@ -751,6 +912,12 @@
   atlasImg.onload = () => makeThumbs(atlasImg);
   atlasImg.src = 'assets/tex_array_0.png';
 
+  function slotImage(item) {
+    if (!item) return null;
+    if (item.kind === 'block') return blockThumbs[item.block] || null;
+    if (item.kind === 'tool')  return TOOLS[item.id]?.img || null;
+    return null;
+  }
   function buildHotbarUI() {
     const el = document.getElementById('hotbar');
     el.innerHTML = '';
@@ -760,12 +927,13 @@
       const swatch = document.createElement('div');
       swatch.className = 'swatch';
       const item = hotbar[i];
-      if (item && blockThumbs[item.block]) swatch.style.backgroundImage = `url(${blockThumbs[item.block]})`;
+      const src = slotImage(item);
+      if (src) swatch.style.backgroundImage = `url(${src})`;
       slot.appendChild(swatch);
       const num = document.createElement('span');
       num.className = 'num'; num.textContent = i + 1;
       slot.appendChild(num);
-      if (item && item.count > 1) {
+      if (item?.kind === 'block' && item.count > 1) {
         const cnt = document.createElement('span');
         cnt.className = 'cnt'; cnt.textContent = item.count;
         slot.appendChild(cnt);
@@ -779,12 +947,12 @@
     if (!el.children.length) { buildHotbarUI(); return; }
     [...el.children].forEach((c, i) => {
       c.classList.toggle('active', i === hotbarSlot);
-      // Update swatch + count if changed
       const item = hotbar[i];
       const swatch = c.querySelector('.swatch');
-      swatch.style.backgroundImage = (item && blockThumbs[item.block]) ? `url(${blockThumbs[item.block]})` : 'none';
+      const src = slotImage(item);
+      swatch.style.backgroundImage = src ? `url(${src})` : 'none';
       let cnt = c.querySelector('.cnt');
-      if (item && item.count > 1) {
+      if (item?.kind === 'block' && item.count > 1) {
         if (!cnt) { cnt = document.createElement('span'); cnt.className = 'cnt'; c.appendChild(cnt); }
         cnt.textContent = item.count;
       } else if (cnt) cnt.remove();
@@ -795,6 +963,7 @@
   function beginPlaying() {
     const sp = findSpawn();
     player.pos.copy(sp); player.vy = 0; player.yaw = 0; player.pitch = 0;
+    giveStartingTools();
     buildMeshes();
     running = true;
     document.getElementById('lobbyPanel').style.display = 'none';
