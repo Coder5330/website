@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Type Race — Multiplayer</title>
+<link rel="stylesheet" href="../style.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+    <li><a href="../about/index.html">About</a></li>
+  </ul>
+
+  <div id="app">
+
+    <!-- Menu -->
+    <div id="screenMenu" class="screen">
+      <h1>Type Race</h1>
+      <p class="sub">Race a friend — first to finish wins!</p>
+      <button id="createBtn">Create Room</button>
+      <div class="or">— or —</div>
+      <div class="join-row">
+        <input id="codeInput" type="text" maxlength="4" placeholder="CODE" />
+        <button id="joinBtn">Join</button>
+      </div>
+    </div>
+
+    <!-- Lobby -->
+    <div id="screenLobby" class="screen">
+      <h2 id="lobbyTitle">Lobby</h2>
+      <div id="codeBox" class="code-box">
+        <p>Share this code with your friend:</p>
+        <span id="codeDisplay"></span>
+      </div>
+      <div id="playerList"></div>
+      <p id="lobbyStatus" class="status-text">Waiting for opponent…</p>
+      <button id="backFromLobbyBtn" class="back-btn">← Back</button>
+    </div>
+
+    <!-- Countdown -->
+    <div id="screenCountdown" class="screen">
+      <div id="countdownNum">3</div>
+    </div>
+
+    <!-- Race -->
+    <div id="screenRace" class="screen">
+      <div id="racers">
+        <div class="racer">
+          <span class="racer-label" id="myLabel">You</span>
+          <div class="bar-wrap"><div class="bar-fill" id="myBar"></div></div>
+          <span class="racer-wpm" id="myWpm">– WPM</span>
+        </div>
+        <div class="racer">
+          <span class="racer-label" id="oppLabel">Opponent</span>
+          <div class="bar-wrap"><div class="bar-fill opp" id="oppBar"></div></div>
+          <span class="racer-wpm" id="oppWpm">– WPM</span>
+        </div>
+      </div>
+      <div id="textBox"></div>
+      <input id="typeInput" type="text"
+        autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+        placeholder="Type here…" />
+    </div>
+
+    <!-- Result -->
+    <div id="screenResult" class="screen">
+      <div id="resultEmoji">🏆</div>
+      <h2 id="resultHeading">You Win!</h2>
+      <p id="resultDetail"></p>
+      <button id="playAgainBtn">Back to Menu</button>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

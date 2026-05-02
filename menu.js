@@ -8,6 +8,7 @@ const GAMES = [
   { label: 'CTF Challenges',   href: '/ctf/index.html' },
   { label: 'Math Game',        href: '/math_game/index.html' },
   { label: 'Slushie Game',     href: '/slushie/index.html' },
+  { label: 'Type Race 🆚',    href: '/typerace/index.html' },
 ];
 
 function _buildDrawer() {
