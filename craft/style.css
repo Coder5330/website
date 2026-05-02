@@ -1,0 +1,150 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #000;
+  padding-top: 55px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#craftApp {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 55px);
+  overflow: hidden;
+  background: #87d0f0;
+}
+
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+/* Overlays */
+.c-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.72);
+  z-index: 10;
+}
+
+.c-panel {
+  background: linear-gradient(160deg,#2d3a7b,#1e2a5a);
+  border: 1px solid rgba(255,255,255,0.13);
+  padding: 2.4rem 2.4rem 2rem;
+  border-radius: 18px;
+  text-align: center;
+  max-width: 400px;
+  width: 92%;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.65);
+}
+
+.c-panel h1 {
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-size: 2.2rem;
+  color: #ffe66d;
+  margin-bottom: 0.35rem;
+  letter-spacing: 1px;
+}
+
+.c-sub {
+  font-family: system-ui, sans-serif;
+  color: rgba(255,255,255,0.65);
+  font-size: 0.92rem;
+  margin-bottom: 1.6rem;
+}
+
+.c-panel > button {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto 0.7rem;
+  padding: 13px;
+  font-size: 1.05rem;
+  font-weight: bold;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  background: #ffe66d;
+  color: #1a1a2e;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.c-panel > button:hover { transform: translateY(-2px); }
+
+.c-or {
+  font-family: system-ui, sans-serif;
+  color: rgba(255,255,255,0.3);
+  margin: 0.6rem 0;
+  font-size: 0.82rem;
+}
+
+.c-join {
+  display: flex;
+  gap: 8px;
+  max-width: 240px;
+  margin: 0 auto 1.2rem;
+}
+
+.c-join input {
+  flex: 1;
+  padding: 11px 6px;
+  font-size: 1.15rem;
+  font-weight: bold;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 6px;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,255,255,0.22);
+  border-radius: 8px;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.c-join input:focus { border-color: #ffe66d; }
+.c-join input::placeholder { letter-spacing: 2px; opacity: 0.4; font-size: 0.82rem; }
+
+.c-join button {
+  padding: 11px 14px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  background: #5ec9ff;
+  color: #0a0a2e;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.c-join button:hover { transform: translateY(-2px); }
+
+.c-hint {
+  font-family: system-ui, sans-serif;
+  font-size: 0.76rem;
+  color: rgba(255,255,255,0.38);
+  line-height: 1.55;
+  margin-top: 0.5rem;
+}
+
+.c-wait-msg {
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+  font-size: 1.05rem;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.c-code-disp {
+  font-family: monospace;
+  font-size: 1.6rem;
+  color: #ffe66d;
+  letter-spacing: 8px;
+  margin: 0.6rem 0;
+}

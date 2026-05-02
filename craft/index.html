@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Craft Online</title>
+<link rel="stylesheet" href="../style.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+    <li><a href="../about/index.html">About</a></li>
+  </ul>
+
+  <div id="craftApp">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Lobby -->
+    <div id="lobbyPanel" class="c-overlay">
+      <div class="c-panel">
+        <h1>⛏️ Craft Online</h1>
+        <p class="c-sub">Build and dig with friends in real-time!</p>
+        <button id="createBtn">Create World</button>
+        <div class="c-or">— or join a friend —</div>
+        <div class="c-join">
+          <input id="codeInput" type="text" maxlength="4" placeholder="CODE" />
+          <button id="joinBtn">Join</button>
+        </div>
+        <p class="c-hint">Left-click: break &nbsp;|&nbsp; Right-click: place &nbsp;|&nbsp; WASD: move &nbsp;|&nbsp; Space: jump &nbsp;|&nbsp; 1-7: blocks</p>
+      </div>
+    </div>
+
+    <!-- Wait (guest only) -->
+    <div id="waitPanel" class="c-overlay" style="display:none">
+      <div class="c-panel">
+        <p id="waitMsg" class="c-wait-msg">Connecting to world…</p>
+        <div class="c-code-disp">Room: <span id="waitCode"></span></div>
+        <p class="c-hint">Share the code with your friend!</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
