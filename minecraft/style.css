@@ -251,10 +251,12 @@ body {
   border: 2px solid rgba(255,255,255,0.2);
   border-radius: 12px;
   padding: 18px 22px;
-  max-width: 720px;
-  width: 90%;
-  max-height: 92%;
+  max-width: 420px;
+  width: 96%;
+  max-height: 88vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 .inv-frame h2 { color: #ffe66d; font-size: 1.4rem; margin-bottom: 8px; }
 .inv-frame h3 { color: #ffe66d; font-size: 1rem; margin: 14px 0 6px; }
@@ -266,6 +268,8 @@ body {
   padding: 4px;
   border-radius: 6px;
   width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
 }
 .iv-slot {
   position: relative;

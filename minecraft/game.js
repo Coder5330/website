@@ -41,10 +41,11 @@
     [ITEM_DIAMOND_SWORD]:{ kind:'sword',   tier:4, name:'Diamond Sword',   img:'assets/diamondsword.png' },
   };
 
-  const ITEM_PLANK = 106, ITEM_STICK = 107;
+  const ITEM_PLANK = 106, ITEM_STICK = 107, ITEM_APPLE = 108;
   const ITEMS = {
     [ITEM_PLANK]: { name: 'Plank' },
     [ITEM_STICK]: { name: 'Stick' },
+    [ITEM_APPLE]: { name: 'Apple' },
   };
 
   // ── Recipes ──────────────────────────────────────────────────────────────
@@ -53,8 +54,8 @@
   // out: ['block'|'item'|'tool', id, count]
   // shapeless: array of [kind, id, count?] — order doesn't matter, no shape constraint
   const RECIPES = [
-    { shapeless:[['block', WOOD, 1]],                 out:['item',  ITEM_PLANK, 4] },
-    { shapeless:[['item',  ITEM_PLANK, 2]],           out:['item',  ITEM_STICK, 4] },
+    { shapeless:[['block', WOOD, 1]],       out:['item', ITEM_PLANK, 4] },
+    { shape:['p','p'], key:{ p:['item', ITEM_PLANK] }, out:['item', ITEM_STICK, 4] },
     { shape:['pp','pp'],
       key:{ p:['item', ITEM_PLANK] },
       out:['block', CRAFTING_TABLE, 1] },
@@ -166,9 +167,9 @@
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 800);
   scene.add(camera);
 
-  scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x6b4f31, 0.85));
-  const sun = new THREE.DirectionalLight(0xffffff, 0.55);
-  sun.position.set(40, 80, 30);
+  scene.add(new THREE.AmbientLight(0xd8eaff, 1.1));
+  const sun = new THREE.DirectionalLight(0xfff5e0, 1.0);
+  sun.position.set(60, 100, 40);
   scene.add(sun);
 
   function resize() {
@@ -276,6 +277,7 @@
     cx.imageSmoothingEnabled = false;
     cx.drawImage(ctImg, 0, 0, ctImg.width, ctImg.height, 0, 0, 32, 32);
     blockThumbs[CRAFTING_TABLE] = c.toDataURL();
+    if (running) markAllChunksDirty();
     updateHotbarUI();
   };
   ctImg.src = 'assets/crafting_table.png';
@@ -749,7 +751,13 @@
       const bx = mining.x, by = mining.y, bz = mining.z, blk = mining.block;
       setB(bx, by, bz, AIR);
       bcast('block', { x: bx, y: by, z: bz, v: AIR });
-      if (canHarvest(blk, mining.tool)) spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk);
+      if (blk === LEAVES) {
+        const r = Math.random();
+        if (r < 0.05)      spawnItemDrop(bx+0.5, by+0.5, bz+0.5, ITEM_STICK);
+        else if (r < 0.07) spawnItemDrop(bx+0.5, by+0.5, bz+0.5, ITEM_APPLE);
+      } else if (canHarvest(blk, mining.tool)) {
+        spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk);
+      }
       mining = null;
       crackMesh.visible = false;
     }
@@ -781,24 +789,34 @@
 
   // ── Dropped items ────────────────────────────────────────────────────────
   const drops = [];
+  const ITEM_DROP_COLOR = { [ITEM_STICK]: 0xa07030, [ITEM_APPLE]: 0xdd2211 };
 
-  function spawnDrop(x, y, z, blockId) {
-    const baseGeo = blockGeos[blockId] || blockGeos[STONE];
-    const geo = baseGeo.clone();
-    geo.scale(0.32, 0.32, 0.32);
-    const mat = (blockId === WATER)         ? waterMaterial
-              : (blockId === CRAFTING_TABLE)? craftingTableMat
-              : (oreMaterials[blockId])     ? oreMaterials[blockId]
-                                            : blockMaterial;
-    const mesh = new THREE.Mesh(geo, mat);
+  function _spawnDrop(x, y, z, blockId, itemId) {
+    let mesh;
+    if (itemId != null) {
+      const geo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
+      const mat = new THREE.MeshLambertMaterial({ color: ITEM_DROP_COLOR[itemId] || 0xffffff });
+      mesh = new THREE.Mesh(geo, mat);
+    } else {
+      const baseGeo = blockGeos[blockId] || blockGeos[STONE];
+      const geo = baseGeo.clone();
+      geo.scale(0.32, 0.32, 0.32);
+      const mat = (blockId === WATER)          ? waterMaterial
+                : (blockId === CRAFTING_TABLE) ? craftingTableMat
+                : (oreMaterials[blockId])      ? oreMaterials[blockId]
+                                               : blockMaterial;
+      mesh = new THREE.Mesh(geo, mat);
+    }
     mesh.position.set(x, y, z);
     scene.add(mesh);
     drops.push({
       pos: new THREE.Vector3(x, y, z),
       vel: new THREE.Vector3((Math.random()-0.5)*1.6, 3.5, (Math.random()-0.5)*1.6),
-      blockId, mesh, age: 0, spin: Math.random() * Math.PI * 2,
+      blockId, itemId, mesh, age: 0, spin: Math.random() * Math.PI * 2,
     });
   }
+  function spawnDrop(x, y, z, blockId)   { _spawnDrop(x, y, z, blockId, null); }
+  function spawnItemDrop(x, y, z, itemId) { _spawnDrop(x, y, z, null, itemId); }
 
   function updateDrops(dt) {
     for (let i = drops.length - 1; i >= 0; i--) {
@@ -825,7 +843,10 @@
         const dz = d.pos.z - player.pos.z;
         const dy = d.pos.y - (player.pos.y + 0.9);
         if (dx*dx + dy*dy + dz*dz < 1.6) {
-          if (addToInventory(d.blockId)) {
+          const picked = d.itemId != null
+            ? addItem(d.itemId, 1)
+            : addToInventory(d.blockId);
+          if (picked) {
             scene.remove(d.mesh); d.mesh.geometry.dispose();
             drops.splice(i, 1);
           }
@@ -1156,8 +1177,16 @@
     cx.strokeStyle = '#5e3f1e'; cx.strokeRect(13, 4, 6, 24);
     return c.toDataURL();
   }
+  function makeAppleThumb() {
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#cc2200'; cx.beginPath(); cx.arc(16, 18, 11, 0, Math.PI*2); cx.fill();
+    cx.fillStyle = '#228822'; cx.fillRect(14, 5, 4, 8);
+    return c.toDataURL();
+  }
   itemThumbs[ITEM_PLANK] = makePlankThumb();
   itemThumbs[ITEM_STICK] = makeStickThumb();
+  itemThumbs[ITEM_APPLE] = makeAppleThumb();
 
   function buildHotbarUI() {
     const el = document.getElementById('hotbar');
@@ -1228,8 +1257,8 @@
 
     document.addEventListener('mousemove', e => {
       if (!invOpen) return;
-      cursorEl.style.left = (e.clientX + 8) + 'px';
-      cursorEl.style.top  = (e.clientY + 8) + 'px';
+      cursorEl.style.left = (e.clientX - 19) + 'px';
+      cursorEl.style.top  = (e.clientY - 19) + 'px';
     });
   }
 
