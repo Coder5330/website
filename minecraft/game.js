@@ -441,7 +441,7 @@
   const BIOMES = {
     forest:   { baseH:20, mtnAmp:36, hillAmp:16, detAmp:5, surf:GRASS, snowH:54, treeRate:0.040 },
     plains:   { baseH:18, mtnAmp:12, hillAmp:6,  detAmp:3, surf:GRASS, snowH:54, treeRate:0.005 },
-    savanna:  { baseH:19, mtnAmp:20, hillAmp:10, detAmp:4, surf:GRASS, snowH:999,treeRate:0.18  },
+    savanna:  { baseH:19, mtnAmp:20, hillAmp:10, detAmp:4, surf:GRASS, snowH:999,treeRate:0.50  },
     desert:   { baseH:17, mtnAmp:18, hillAmp:8,  detAmp:4, surf:SAND,  snowH:999,treeRate:0     },
     cold:     { baseH:17, mtnAmp:16, hillAmp:6,  detAmp:3, surf:SNOW,  snowH:10, treeRate:0.005 },
     mountain: { baseH:32, mtnAmp:56, hillAmp:18, detAmp:6, surf:STONE, snowH:48, treeRate:0.009 },
