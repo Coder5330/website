@@ -18,11 +18,11 @@
       <p class="hint">Press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> to hit the tiles in each column.<br>Miss a tile and you die.</p>
       <button id="startBtn">Start</button>
       <button id="leaderboardBtn">Leaderboard</button>
-      <p class="credit">Music courtesy of <a href="http://www.classicals.de" target="_blank" rel="noopener">www.classicals.de</a></p>
+      <p class="credit">Music courtesy of <a href="http://www.classicals.de" target="_blank" rel="noopener">[www.classicals.de](http://www.classicals.de)</a></p>
     </div>
-
     <div id="game" class="screen hidden">
       <div id="hud">
+        <div id="level">⭐</div>
         <div id="score">0</div>
       </div>
       <div id="board">
@@ -36,7 +36,6 @@
         </div>
       </div>
     </div>
-
     <div id="gameover" class="screen hidden">
       <h2>Game Over</h2>
       <p>Score: <span id="finalScore">0</span></p>
@@ -49,14 +48,12 @@
         <button id="viewBoardBtn">Leaderboard</button>
       </div>
     </div>
-
     <div id="leaderboard" class="screen hidden">
       <h2>Leaderboard</h2>
       <ol id="scoreList"></ol>
       <button id="backBtn">Back</button>
     </div>
   </div>
-
   <audio id="music" src="assets/music.mp3" preload="auto" loop></audio>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../supabase.js"></script>
