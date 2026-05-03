@@ -7,6 +7,48 @@ html, body {
   color: #f0f0f0;
   overflow: hidden;
 }
+#levelBar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+  font-size: 1.2em;
+}
+
+.level-item {
+  opacity: 0.3;
+  transition: all 0.3s ease;
+}
+
+.level-item.active {
+  opacity: 1;
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+}
+
+.level-item.completed {
+  opacity: 0.6;
+}
+
+.level-separator {
+  opacity: 0.3;
+  font-size: 0.6em;
+}
+
+.level-separator.completed {
+  opacity: 0.6;
+}
+
+#hud {
+  text-align: center;
+  padding: 10px;
+}
+
+#score {
+  font-size: 2em;
+  font-weight: bold;
+}
 
 #level {
   font-size: 2em;
