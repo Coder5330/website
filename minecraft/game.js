@@ -1732,6 +1732,18 @@
       const [cx, cz] = k.split(',').map(Number);
       buildChunkMesh(cx, cz);
     }
+    if (roomCode === 'AB67') {
+      const maxDur = id => TOOL_MAX_DUR[id] ?? 60;
+      inventory[0] = { kind:'tool', id:ITEM_DIAMOND_PICK,  dur:maxDur(ITEM_DIAMOND_PICK)  };
+      inventory[1] = { kind:'tool', id:ITEM_DIAMOND_AXE,   dur:maxDur(ITEM_DIAMOND_AXE)   };
+      inventory[2] = { kind:'tool', id:ITEM_DIAMOND_SWORD, dur:maxDur(ITEM_DIAMOND_SWORD)  };
+      inventory[3] = { kind:'tool', id:ITEM_IRON_SHOVEL,   dur:maxDur(ITEM_IRON_SHOVEL)   };
+      inventory[4] = { kind:'block', block:CRAFTING_TABLE, count:16 };
+      inventory[5] = { kind:'block', block:WOOD,           count:64 };
+      inventory[6] = { kind:'block', block:STONE,          count:64 };
+      inventory[7] = { kind:'block', block:DIRT,           count:64 };
+    }
+
     running = true;
     document.getElementById('lobbyPanel').style.display = 'none';
     document.getElementById('waitPanel').style.display = 'none';
