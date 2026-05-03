@@ -230,6 +230,7 @@
   const blockMaterial = new THREE.MeshLambertMaterial({ map: atlasTex });
   const waterMaterial = new THREE.MeshLambertMaterial({
     map: waterTex, color: 0x99ccff, transparent: true, opacity: 0.78, depthWrite: false,
+    side: THREE.DoubleSide,
   });
   // Tinted wood-atlas material to distinguish crafting table visually
   const craftingTableMat = new THREE.MeshLambertMaterial({ map: atlasTex, color: 0x8b4513 });
@@ -311,6 +312,24 @@
   hand.rotation.x = -0.35;
   camera.add(hand);
   let armSwing = 0;
+
+  // ── Third-person player mesh ─────────────────────────────────────────────
+  let thirdPerson = false;
+  const playerMeshGroup = new THREE.Group();
+  const _pmBody = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 1.2, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0xe74c3c })
+  );
+  _pmBody.position.y = 0.6;
+  playerMeshGroup.add(_pmBody);
+  const _pmHead = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.MeshLambertMaterial({ color: 0xffd6a8 })
+  );
+  _pmHead.position.y = 1.45;
+  playerMeshGroup.add(_pmHead);
+  playerMeshGroup.visible = false;
+  scene.add(playerMeshGroup);
 
   // ── Chunk world helpers ──────────────────────────────────────────────────
   const chunkLocal = (n) => ((n % CHUNK_W) + CHUNK_W) % CHUNK_W;
@@ -440,6 +459,7 @@
       if (getB(d.x,d.y,d.z) === LEAVES && !playerPlaced.has(ek(d.x,d.y,d.z))) {
         setB(d.x, d.y, d.z, AIR);
         bcast('block', { x:d.x, y:d.y, z:d.z, v:AIR });
+        afterBlockRemoved(d.x, d.y, d.z);
       }
     }
   }
@@ -764,8 +784,20 @@
       const sp = findSpawn(); player.pos.copy(sp); player.vy = 0;
     }
 
-    camera.position.set(player.pos.x, player.pos.y + EYE, player.pos.z);
-    camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+    if (thirdPerson) {
+      const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
+      camera.position.set(player.pos.x + sy * 4, player.pos.y + EYE + 2, player.pos.z + cy * 4);
+      camera.lookAt(player.pos.x, player.pos.y + 1.0, player.pos.z);
+      hand.visible = false;
+      playerMeshGroup.position.set(player.pos.x, player.pos.y, player.pos.z);
+      playerMeshGroup.rotation.y = -player.yaw;
+      playerMeshGroup.visible = true;
+    } else {
+      camera.position.set(player.pos.x, player.pos.y + EYE, player.pos.z);
+      camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+      hand.visible = true;
+      playerMeshGroup.visible = false;
+    }
   }
 
   function raycastBlock() {
@@ -788,6 +820,54 @@
       else                        { z += sz; tmz += tdz; face = [0,0,-sz]; }
       if (isSolidAt(x,y,z)) return { x, y, z, normal: face };
     }
+  }
+
+  // ── Physics events: water flow + sand gravity ────────────────────────────
+  function triggerFlow(x, y, z) {
+    // (x,y,z) just became AIR — find adjacent WATER and spread from it
+    const sources = [];
+    for (const [dx,dy,dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+      if (getB(x+dx,y+dy,z+dz) === WATER) sources.push([x+dx,y+dy,z+dz,0]);
+    }
+    if (!sources.length) return;
+    const visited = new Set();
+    visited.add(ek(x,y,z));
+    for (const [sx,sy,sz] of sources) visited.add(ek(sx,sy,sz));
+    const queue = [...sources];
+    while (queue.length) {
+      const [wx,wy,wz,hops] = queue.shift();
+      const bkDown = ek(wx,wy-1,wz);
+      if (wy > 0 && !visited.has(bkDown) && getB(wx,wy-1,wz) === AIR) {
+        visited.add(bkDown);
+        setB(wx,wy-1,wz,WATER); bcast('block',{x:wx,y:wy-1,z:wz,v:WATER});
+        queue.push([wx,wy-1,wz,0]);
+      }
+      if (hops < 7) {
+        for (const [dx,dz] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+          const nx=wx+dx, nz=wz+dz, bk=ek(nx,wy,nz);
+          if (!visited.has(bk) && getB(nx,wy,nz) === AIR) {
+            visited.add(bk);
+            setB(nx,wy,nz,WATER); bcast('block',{x:nx,y:wy,z:nz,v:WATER});
+            queue.push([nx,wy,nz,hops+1]);
+          }
+        }
+      }
+    }
+  }
+
+  function afterBlockRemoved(x, y, z) {
+    // Sand gravity: cascade sand fall upward from cleared block
+    let clearY = y;
+    while (clearY + 1 < WY && getB(x, clearY+1, z) === SAND) {
+      const fromY = clearY + 1;
+      let landY = clearY;
+      while (landY > 0 && getB(x, landY-1, z) === AIR) landY--;
+      setB(x, fromY, z, AIR);  bcast('block',{x, y:fromY, z, v:AIR});
+      setB(x, landY, z, SAND); bcast('block',{x, y:landY, z, v:SAND});
+      clearY = fromY;
+    }
+    // Water flow from adjacent water sources
+    triggerFlow(x, y, z);
   }
 
   // ── Mining ───────────────────────────────────────────────────────────────
@@ -827,12 +907,13 @@
       const bx = mining.x, by = mining.y, bz = mining.z, blk = mining.block;
       setB(bx, by, bz, AIR);
       bcast('block', { x: bx, y: by, z: bz, v: AIR });
+      afterBlockRemoved(bx, by, bz);
       if (blk === LEAVES) {
         const r = Math.random();
         if (r < 0.05)      spawnItemDrop(bx+0.5, by+0.5, bz+0.5, ITEM_STICK);
         else if (r < 0.07) spawnItemDrop(bx+0.5, by+0.5, bz+0.5, ITEM_APPLE);
       } else if (canHarvest(blk, mining.tool)) {
-        spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk);
+        spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk === GRASS ? DIRT : blk);
         if (blk === WOOD) queueLeafDecay(bx, by, bz);
       }
       mining = null;
@@ -1190,6 +1271,7 @@
   document.addEventListener('keydown', e => {
     if (!running) return;
     if (e.code === 'KeyE') { toggleInventory(); e.preventDefault(); return; }
+    if (e.code === 'F5') { thirdPerson = !thirdPerson; e.preventDefault(); return; }
     if (e.code === 'Escape' && invOpen) { toggleInventory(); return; }
     if (invOpen) return;
     if (e.code === 'KeyW' || e.code === 'ArrowUp')    inputKeys.fwd = true;
@@ -1544,6 +1626,7 @@
       const [cx, cz] = k.split(',').map(Number);
       buildChunkMesh(cx, cz);
     }
+    _pmBody.material.color.setHex(myColor);
     running = true;
     document.getElementById('lobbyPanel').style.display = 'none';
     document.getElementById('waitPanel').style.display = 'none';
