@@ -443,7 +443,7 @@
     if (rough > 0.72) return 'mountain';
     if (temp > 0.68 && moist < 0.38) return 'desert';
     if (temp > 0.58) return 'savanna';
-    if (temp < 0.28) return 'cold';
+    if (temp < 0.15) return 'cold';
     if (moist < 0.38) return 'plains';
     return 'forest';
   }
@@ -726,7 +726,8 @@
 
   // ── Spawn search ─────────────────────────────────────────────────────────
   function findSpawn() {
-    // Search outward from origin for a non-water grass/dirt surface
+    // Search outward from origin — prefer grass/dirt surface, skip snow/stone/water
+    const warmSurf = new Set([GRASS, DIRT, SAND]);
     for (let r = 0; r < CHUNK_W * (MESH_DIST + 1); r++) {
       for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
@@ -734,8 +735,9 @@
         const cx = Math.floor(x / CHUNK_W), cz = Math.floor(z / CHUNK_W);
         if (!chunks.has(ckey(cx, cz))) continue;
         for (let y = WY - 3; y > 0; y--) {
+          const surf = getB(x, y, z);
           if (isSolidAt(x, y, z) && getB(x, y+1, z) === AIR && getB(x, y+2, z) === AIR
-              && getB(x, y, z) !== WATER) {
+              && warmSurf.has(surf)) {
             return new THREE.Vector3(x + 0.5, y + 1, z + 0.5);
           }
         }
