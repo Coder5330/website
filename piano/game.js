@@ -129,6 +129,7 @@
     if (newLevel !== currentLevel) {
       currentLevel = newLevel;
       updateLevelBar();
+      syncMusic();
     }
   }
 
@@ -210,6 +211,7 @@
 
     music.currentTime = 0;
     music.play().catch(() => {});
+    syncMusic();
 
     beatTimer = setTimeout(onBeat, INITIAL_DELAY);
 
