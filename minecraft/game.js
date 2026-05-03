@@ -224,7 +224,7 @@
   for (const id of ATLAS_BLOCKS) blockGeos[id] = makeBlockGeo(id);
   blockGeos[BEDROCK] = blockGeos[STONE];
   blockGeos[WATER]   = new THREE.BoxGeometry(1, 1, 1);
-  blockGeos[CRAFTING_TABLE] = makeBlockGeo(WOOD); // wood UVs, distinctive tint via material
+  blockGeos[CRAFTING_TABLE] = new THREE.BoxGeometry(1, 1, 1);
   for (const id of ORES) blockGeos[id] = new THREE.BoxGeometry(1, 1, 1);
 
   const blockMaterial = new THREE.MeshLambertMaterial({ map: atlasTex });
@@ -232,8 +232,7 @@
     map: waterTex, color: 0x99ccff, transparent: true, opacity: 0.78, depthWrite: false,
     side: THREE.DoubleSide,
   });
-  // Tinted wood-atlas material to distinguish crafting table visually
-  const craftingTableMat = new THREE.MeshLambertMaterial({ map: atlasTex, color: 0x8b4513 });
+  const craftingTableMat = new THREE.MeshLambertMaterial({ map: ctTex });
 
   // Ore textures
   const oreMaterials = {};
