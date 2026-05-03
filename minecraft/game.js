@@ -37,6 +37,50 @@
     [ITEM_DIAMOND_SWORD]:{ kind:'sword',   tier:4, name:'Diamond Sword',   img:'assets/diamondsword.png' },
   };
 
+  // ── Crafting items (non-tool, non-block) ─────────────────────────────────
+  const ITEM_PLANK = 106, ITEM_STICK = 107;
+  const ITEMS = {
+    [ITEM_PLANK]: { name: 'Plank', color: '#c8954a' },
+    [ITEM_STICK]: { name: 'Stick', color: '#8b6914' },
+  };
+  // ── Recipes (each ingredient: ['block'|'tool'|'item', id, count]) ────────
+  const RECIPES = [
+    { name:'4 Planks',          out:['item', ITEM_PLANK, 4],
+      in:[['block', WOOD, 1]] },
+    { name:'4 Sticks',          out:['item', ITEM_STICK, 4],
+      in:[['item', ITEM_PLANK, 2]] },
+    { name:'Wood Pickaxe',      out:['tool', ITEM_WOOD_PICK, 1],
+      in:[['item', ITEM_PLANK, 3], ['item', ITEM_STICK, 2]] },
+    { name:'Wood Axe',          out:['tool', ITEM_WOOD_AXE, 1],
+      in:[['item', ITEM_PLANK, 3], ['item', ITEM_STICK, 2]] },
+    { name:'Wood Shovel',       out:['tool', ITEM_WOOD_SHOVEL, 1],
+      in:[['item', ITEM_PLANK, 1], ['item', ITEM_STICK, 2]] },
+    { name:'Wood Sword',        out:['tool', ITEM_WOOD_SWORD, 1],
+      in:[['item', ITEM_PLANK, 2], ['item', ITEM_STICK, 1]] },
+    { name:'Stone Pickaxe',     out:['tool', ITEM_STONE_PICK, 1],
+      in:[['block', STONE, 3], ['item', ITEM_STICK, 2]] },
+    { name:'Stone Axe',         out:['tool', ITEM_STONE_AXE, 1],
+      in:[['block', STONE, 3], ['item', ITEM_STICK, 2]] },
+    { name:'Stone Shovel',      out:['tool', ITEM_STONE_SHOVEL, 1],
+      in:[['block', STONE, 1], ['item', ITEM_STICK, 2]] },
+    { name:'Stone Sword',       out:['tool', ITEM_STONE_SWORD, 1],
+      in:[['block', STONE, 2], ['item', ITEM_STICK, 1]] },
+    { name:'Iron Pickaxe',      out:['tool', ITEM_IRON_PICK, 1],
+      in:[['block', IRON_ORE, 3], ['item', ITEM_STICK, 2]] },
+    { name:'Iron Axe',          out:['tool', ITEM_IRON_AXE, 1],
+      in:[['block', IRON_ORE, 3], ['item', ITEM_STICK, 2]] },
+    { name:'Iron Shovel',       out:['tool', ITEM_IRON_SHOVEL, 1],
+      in:[['block', IRON_ORE, 1], ['item', ITEM_STICK, 2]] },
+    { name:'Iron Sword',        out:['tool', ITEM_IRON_SWORD, 1],
+      in:[['block', IRON_ORE, 2], ['item', ITEM_STICK, 1]] },
+    { name:'Diamond Pickaxe',   out:['tool', ITEM_DIAMOND_PICK, 1],
+      in:[['block', DIAMOND_ORE, 3], ['item', ITEM_STICK, 2]] },
+    { name:'Diamond Axe',       out:['tool', ITEM_DIAMOND_AXE, 1],
+      in:[['block', DIAMOND_ORE, 3], ['item', ITEM_STICK, 2]] },
+    { name:'Diamond Sword',     out:['tool', ITEM_DIAMOND_SWORD, 1],
+      in:[['block', DIAMOND_ORE, 2], ['item', ITEM_STICK, 1]] },
+  ];
+
   // What tool each block prefers + minimum tier required to drop
   const BLOCK_TOOL = {
     [SAND]:'shovel', [DIRT]:'shovel', [GRASS]:'shovel', [SNOW]:'shovel',
@@ -51,33 +95,45 @@
     [GOLD_ORE]:3, [DIAMOND_ORE]:3, [REDSTONE_ORE]:3,
   };
 
-  // Hand-mining times (s) — straight from voxel_handler.py
-  const BREAK_TIME = {
-    [SAND]: 0.75, [GRASS]: 0.9, [DIRT]: 0.75, [STONE]: 7.5,
-    [SNOW]: 0.5,  [LEAVES]: 0.3, [WOOD]: 3.0,
-    [COAL_ORE]: 7.5, [IRON_ORE]: 15, [COPPER_ORE]: 15,
-    [GOLD_ORE]: 15, [DIAMOND_ORE]: 15, [REDSTONE_ORE]: 15,
+  // Block hardness (Minecraft wiki / voxel_handler.py)
+  const BLOCK_HARDNESS = {
+    [SAND]: 0.5, [GRASS]: 0.6, [DIRT]: 0.5, [SNOW]: 0.1,
+    [WOOD]: 2.0, [LEAVES]: 0.2, [STONE]: 1.5,
+    [COAL_ORE]: 3.0, [IRON_ORE]: 3.0, [COPPER_ORE]: 3.0,
+    [GOLD_ORE]: 3.0, [REDSTONE_ORE]: 3.0, [DIAMOND_ORE]: 3.0,
     [BEDROCK]: Infinity,
   };
-  // Speed multipliers per tier when the tool kind matches the block
-  const TIER_SPEED = [1, 6, 9, 13, 18];
+  // Mining speed multiplier per tool tier (1=wood, 2=stone, 3=iron, 4=diamond)
+  const TIER_SPEED = [1, 2, 4, 6, 8];
 
   function getSelectedTool() {
-    const slot = hotbar[hotbarSlot];
+    const slot = inventory[hotbarSlot];
     return (slot && slot.kind === 'tool') ? slot.id : null;
-  }
-  function getMineTime(block, itemId) {
-    const base = BREAK_TIME[block] ?? 1.0;
-    if (itemId == null) return base;
-    const t = TOOLS[itemId];
-    if (!t || t.kind !== BLOCK_TOOL[block]) return base;
-    return base / TIER_SPEED[t.tier];
   }
   function canHarvest(block, itemId) {
     const minTier = BLOCK_MIN_TIER[block] || 0;
     if (minTier === 0) return true;
     const t = itemId != null ? TOOLS[itemId] : null;
     return !!(t && t.kind === BLOCK_TOOL[block] && t.tier >= minTier);
+  }
+  // Official Minecraft Java Edition mining-time formula
+  function getMineTime(block, itemId) {
+    const hardness = BLOCK_HARDNESS[block];
+    if (hardness === undefined || hardness === Infinity) return Infinity;
+
+    const t = itemId != null ? TOOLS[itemId] : null;
+    let speedMultiplier = 1;
+    if (t && t.kind === BLOCK_TOOL[block]) speedMultiplier = TIER_SPEED[t.tier];
+
+    if (inWater())          speedMultiplier *= 0.2; // submerged, no aqua affinity
+    if (!player.grounded)   speedMultiplier /= 5;
+
+    let damage = speedMultiplier / hardness;
+    damage /= canHarvest(block, itemId) ? 30 : 100;
+
+    if (damage >= 1) return 0; // instant break
+    const ticks = Math.ceil(1 / damage);
+    return ticks / 20;
   }
 
   // ── Physics ──────────────────────────────────────────────────────────────
@@ -97,10 +153,13 @@
   const player = { pos: new THREE.Vector3(0,0,0), vy:0, grounded:false, yaw:0, pitch:0 };
   const inputKeys = { fwd:false, back:false, left:false, right:false, jump:false, sprint:false };
 
-  // Inventory: 9 slots, each null | {kind:'block', block, count} | {kind:'tool', id}
+  // Inventory: 36 total slots; first 9 are the hotbar.
+  // Each slot: null | {kind:'block', block, count} | {kind:'tool', id} | {kind:'item', id, count}
   const HOTBAR_SIZE = 9;
-  const hotbar = Array(HOTBAR_SIZE).fill(null);
+  const INV_SIZE = 36;
+  const inventory = Array(INV_SIZE).fill(null);
   const blockThumbs = {}; // populated by atlas + ore loaders
+  const itemThumbs = {};  // populated for non-block items (planks, sticks)
 
   // ── Three.js ─────────────────────────────────────────────────────────────
   const canvas = document.getElementById('mcCanvas');
@@ -604,7 +663,7 @@
 
   function placeBlock() {
     const hit = raycastBlock(); if (!hit) return;
-    const slot = hotbar[hotbarSlot];
+    const slot = inventory[hotbarSlot];
     if (!slot || slot.kind !== 'block' || slot.count <= 0) return;
     const px = hit.x + hit.normal[0], py = hit.y + hit.normal[1], pz = hit.z + hit.normal[2];
     if (px<0||px>=WX||py<0||py>=WY||pz<0||pz>=WZ) return;
@@ -617,7 +676,7 @@
     const blk = slot.block;
     setB(px, py, pz, blk);
     slot.count--;
-    if (slot.count <= 0) hotbar[hotbarSlot] = null;
+    if (slot.count <= 0) inventory[hotbarSlot] = null;
     updateHotbarUI();
     bcast('block', { x:px, y:py, z:pz, v:blk });
     worldDirty = true;
@@ -709,29 +768,78 @@
     }
   }
 
-  // ── Inventory ────────────────────────────────────────────────────────────
-  function addToInventory(blockId) {
-    for (let i = 0; i < HOTBAR_SIZE; i++) {
-      if (hotbar[i]?.kind === 'block' && hotbar[i].block === blockId) {
-        hotbar[i].count++; updateHotbarUI(); return true;
+  // ── Inventory + crafting helpers ─────────────────────────────────────────
+  function addStackable(kind, id, count) {
+    // Try to stack with existing
+    for (let i = 0; i < INV_SIZE; i++) {
+      const s = inventory[i];
+      if (s && s.kind === kind && (s.block === id || s.id === id)) {
+        s.count += count; updateInventoryUI(); return true;
       }
     }
-    for (let i = 0; i < HOTBAR_SIZE; i++) {
-      if (!hotbar[i]) {
-        hotbar[i] = { kind: 'block', block: blockId, count: 1 };
-        updateHotbarUI(); return true;
+    // Otherwise empty slot
+    for (let i = 0; i < INV_SIZE; i++) {
+      if (!inventory[i]) {
+        inventory[i] = (kind === 'block')
+          ? { kind, block: id, count }
+          : { kind, id, count };
+        updateInventoryUI(); return true;
       }
     }
     return false;
   }
+  function addToInventory(blockId) { return addStackable('block', blockId, 1); }
+  function addItem(itemId, count = 1) { return addStackable('item', itemId, count); }
+  function addTool(itemId) {
+    for (let i = 0; i < INV_SIZE; i++) {
+      if (!inventory[i]) { inventory[i] = { kind:'tool', id: itemId }; updateInventoryUI(); return true; }
+    }
+    return false;
+  }
+
+  function countOf(kind, id) {
+    let n = 0;
+    for (const s of inventory) {
+      if (!s || s.kind !== kind) continue;
+      if (kind === 'block' && s.block === id) n += s.count;
+      else if (kind !== 'block' && s.id === id) n += (s.count || 1);
+    }
+    return n;
+  }
+  function consume(kind, id, count) {
+    let need = count;
+    for (let i = 0; i < INV_SIZE && need > 0; i++) {
+      const s = inventory[i]; if (!s || s.kind !== kind) continue;
+      const matches = (kind === 'block') ? s.block === id : s.id === id;
+      if (!matches) continue;
+      const take = Math.min(s.count || 1, need);
+      s.count = (s.count || 1) - take;
+      need -= take;
+      if (s.count <= 0) inventory[i] = null;
+    }
+  }
+  function canCraft(recipe) {
+    return recipe.in.every(([k, id, n]) => countOf(k, id) >= n);
+  }
+  function craft(recipe) {
+    if (!canCraft(recipe)) return false;
+    for (const [k, id, n] of recipe.in) consume(k, id, n);
+    const [ok, oid, on] = recipe.out;
+    if (ok === 'block')      addStackable('block', oid, on);
+    else if (ok === 'item')  addStackable('item',  oid, on);
+    else if (ok === 'tool')  addTool(oid);
+    updateInventoryUI();
+    if (invOpen) renderInventoryPanel();
+    return true;
+  }
   function giveStartingTools() {
-    hotbar[0] = { kind:'tool', id: ITEM_WOOD_PICK };
-    hotbar[1] = { kind:'tool', id: ITEM_STONE_PICK };
-    hotbar[2] = { kind:'tool', id: ITEM_IRON_PICK };
-    hotbar[3] = { kind:'tool', id: ITEM_DIAMOND_PICK };
-    hotbar[4] = { kind:'tool', id: ITEM_IRON_AXE };
-    hotbar[5] = { kind:'tool', id: ITEM_IRON_SHOVEL };
-    hotbar[6] = { kind:'tool', id: ITEM_DIAMOND_SWORD };
+    inventory[0] = { kind:'tool', id: ITEM_WOOD_PICK };
+    inventory[1] = { kind:'tool', id: ITEM_STONE_PICK };
+    inventory[2] = { kind:'tool', id: ITEM_IRON_PICK };
+    inventory[3] = { kind:'tool', id: ITEM_DIAMOND_PICK };
+    inventory[4] = { kind:'tool', id: ITEM_IRON_AXE };
+    inventory[5] = { kind:'tool', id: ITEM_IRON_SHOVEL };
+    inventory[6] = { kind:'tool', id: ITEM_DIAMOND_SWORD };
   }
 
   // ── Other players ────────────────────────────────────────────────────────
@@ -839,7 +947,7 @@
 
   // ── Input ────────────────────────────────────────────────────────────────
   let pointerLocked = false;
-  canvas.addEventListener('click', () => { if (running) canvas.requestPointerLock(); });
+  canvas.addEventListener('click', () => { if (running && !invOpen) canvas.requestPointerLock(); });
   document.addEventListener('pointerlockchange', () => {
     pointerLocked = document.pointerLockElement === canvas;
     document.getElementById('lockHint').style.display = (running && !pointerLocked) ? 'block' : 'none';
@@ -870,6 +978,9 @@
 
   document.addEventListener('keydown', e => {
     if (!running) return;
+    if (e.code === 'KeyE') { toggleInventory(); e.preventDefault(); return; }
+    if (e.code === 'Escape' && invOpen) { toggleInventory(); return; }
+    if (invOpen) return;
     if (e.code === 'KeyW' || e.code === 'ArrowUp')    inputKeys.fwd = true;
     if (e.code === 'KeyS' || e.code === 'ArrowDown')  inputKeys.back = true;
     if (e.code === 'KeyA' || e.code === 'ArrowLeft')  inputKeys.left = true;
@@ -916,28 +1027,40 @@
     if (!item) return null;
     if (item.kind === 'block') return blockThumbs[item.block] || null;
     if (item.kind === 'tool')  return TOOLS[item.id]?.img || null;
+    if (item.kind === 'item')  return itemThumbs[item.id] || null;
     return null;
   }
+  function makePlankThumb() {
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#c8954a'; cx.fillRect(2, 8, 28, 16);
+    cx.strokeStyle = '#7a4f28'; cx.lineWidth = 1;
+    cx.strokeRect(2, 8, 28, 16);
+    cx.beginPath(); cx.moveTo(2, 16); cx.lineTo(30, 16); cx.stroke();
+    return c.toDataURL();
+  }
+  function makeStickThumb() {
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#a87838'; cx.fillRect(13, 4, 6, 24);
+    cx.strokeStyle = '#5e3f1e'; cx.strokeRect(13, 4, 6, 24);
+    return c.toDataURL();
+  }
+  itemThumbs[ITEM_PLANK] = makePlankThumb();
+  itemThumbs[ITEM_STICK] = makeStickThumb();
   function buildHotbarUI() {
     const el = document.getElementById('hotbar');
     el.innerHTML = '';
     for (let i = 0; i < HOTBAR_SIZE; i++) {
       const slot = document.createElement('div');
       slot.className = 'slot';
+      slot.addEventListener('click', () => { hotbarSlot = i; updateHotbarUI(); });
       const swatch = document.createElement('div');
       swatch.className = 'swatch';
-      const item = hotbar[i];
-      const src = slotImage(item);
-      if (src) swatch.style.backgroundImage = `url(${src})`;
       slot.appendChild(swatch);
       const num = document.createElement('span');
       num.className = 'num'; num.textContent = i + 1;
       slot.appendChild(num);
-      if (item?.kind === 'block' && item.count > 1) {
-        const cnt = document.createElement('span');
-        cnt.className = 'cnt'; cnt.textContent = item.count;
-        slot.appendChild(cnt);
-      }
       el.appendChild(slot);
     }
     updateHotbarUI();
@@ -947,16 +1070,104 @@
     if (!el.children.length) { buildHotbarUI(); return; }
     [...el.children].forEach((c, i) => {
       c.classList.toggle('active', i === hotbarSlot);
-      const item = hotbar[i];
+      const item = inventory[i];
       const swatch = c.querySelector('.swatch');
       const src = slotImage(item);
       swatch.style.backgroundImage = src ? `url(${src})` : 'none';
       let cnt = c.querySelector('.cnt');
-      if (item?.kind === 'block' && item.count > 1) {
+      const showCount = item && item.kind !== 'tool' && (item.count || 0) > 1;
+      if (showCount) {
         if (!cnt) { cnt = document.createElement('span'); cnt.className = 'cnt'; c.appendChild(cnt); }
         cnt.textContent = item.count;
       } else if (cnt) cnt.remove();
     });
+  }
+  function updateInventoryUI() { updateHotbarUI(); if (invOpen) renderInventoryPanel(); }
+
+  // ── Inventory overlay (E to toggle) ──────────────────────────────────────
+  let invOpen = false;
+  let invPanelEl = null;
+
+  function ensureInvPanel() {
+    if (invPanelEl) return;
+    invPanelEl = document.createElement('div');
+    invPanelEl.id = 'invPanel';
+    invPanelEl.innerHTML = `
+      <div class="inv-frame">
+        <h2>Inventory</h2>
+        <div class="inv-grid" id="invGrid"></div>
+        <h3>Hotbar</h3>
+        <div class="inv-grid hotbar" id="invHotbar"></div>
+        <h3>Crafting</h3>
+        <div class="recipes" id="invRecipes"></div>
+        <p class="inv-hint">Press <b>E</b> or <b>Esc</b> to close. Click recipe to craft.</p>
+      </div>`;
+    invPanelEl.style.display = 'none';
+    document.getElementById('mcApp').appendChild(invPanelEl);
+  }
+
+  function slotHTML(item) {
+    if (!item) return '<div class="iv-slot"></div>';
+    const src = slotImage(item);
+    const bg = src ? `style="background-image:url(${src})"` : '';
+    const cnt = (item.kind !== 'tool' && (item.count || 0) > 1) ? `<span class="cnt">${item.count}</span>` : '';
+    const title = item.kind === 'block' ? '' : (item.kind === 'tool' ? TOOLS[item.id]?.name : ITEMS[item.id]?.name) || '';
+    return `<div class="iv-slot filled" title="${title}"><div class="iv-swatch" ${bg}></div>${cnt}</div>`;
+  }
+
+  function renderInventoryPanel() {
+    if (!invPanelEl) ensureInvPanel();
+    const grid = invPanelEl.querySelector('#invGrid');
+    const hbar = invPanelEl.querySelector('#invHotbar');
+    let g = '';
+    for (let i = HOTBAR_SIZE; i < INV_SIZE; i++) g += slotHTML(inventory[i]);
+    grid.innerHTML = g;
+    let h = '';
+    for (let i = 0; i < HOTBAR_SIZE; i++) h += slotHTML(inventory[i]);
+    hbar.innerHTML = h;
+    const recipesEl = invPanelEl.querySelector('#invRecipes');
+    recipesEl.innerHTML = '';
+    for (const r of RECIPES) {
+      const ok = canCraft(r);
+      const ingHTML = r.in.map(([k, id, n]) => {
+        const fake = (k === 'block') ? { kind:'block', block:id, count:n }
+                  : (k === 'tool')  ? { kind:'tool',  id }
+                                    : { kind:'item',  id, count:n };
+        const src = slotImage(fake);
+        return `<span class="ing"><span class="ing-img" style="background-image:url(${src||''})"></span>×${n}</span>`;
+      }).join('');
+      const [ok2, oid, on] = r.out;
+      const outFake = (ok2 === 'block') ? { kind:'block', block:oid, count:on }
+                    : (ok2 === 'tool')  ? { kind:'tool',  id:oid }
+                                        : { kind:'item',  id:oid, count:on };
+      const outImg = slotImage(outFake) || '';
+      const div = document.createElement('div');
+      div.className = 'recipe' + (ok ? ' can' : '');
+      div.innerHTML = `
+        <div class="r-out"><div class="ing-img" style="background-image:url(${outImg})"></div>×${on}</div>
+        <div class="r-arrow">←</div>
+        <div class="r-ings">${ingHTML}</div>
+        <div class="r-name">${r.name}</div>`;
+      div.addEventListener('click', () => { if (canCraft(r)) craft(r); });
+      recipesEl.appendChild(div);
+    }
+  }
+
+  function toggleInventory() {
+    invOpen = !invOpen;
+    ensureInvPanel();
+    if (invOpen) {
+      if (document.pointerLockElement) document.exitPointerLock();
+      // Stop motion keys held when opening
+      inputKeys.fwd = inputKeys.back = inputKeys.left = inputKeys.right = false;
+      inputKeys.jump = inputKeys.sprint = false;
+      mouseDownLeft = false; mining = null;
+      crackMesh.visible = false;
+      invPanelEl.style.display = 'flex';
+      renderInventoryPanel();
+    } else {
+      invPanelEl.style.display = 'none';
+    }
   }
 
   // ── Boot ────────────────────────────────────────────────────────────────
