@@ -16,7 +16,14 @@
   let gameStartTime = 0;
   let currentLevel = 0;
   let tilesHit = 0;
-
+  function getMusicRate() {
+    // Base speed is level 0 = 150px/s, map that to playbackRate 1.0
+    return LEVELS[currentLevel].speed / 150;
+  }
+  
+  function syncMusic() {
+    music.playbackRate = getMusicRate();
+  }
   function getCurrentLevel() {
     for (let i = LEVELS.length - 1; i >= 0; i--) {
       if (tilesHit >= LEVELS[i].threshold) {
@@ -414,11 +421,4 @@
   show('menu');
 })();
 
-function getMusicRate() {
-  // Base speed is level 0 = 150px/s, map that to playbackRate 1.0
-  return LEVELS[currentLevel].speed / 150;
-}
 
-function syncMusic() {
-  music.playbackRate = getMusicRate();
-}
