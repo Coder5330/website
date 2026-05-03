@@ -7,6 +7,7 @@ html, body {
   color: #f0f0f0;
   overflow: hidden;
 }
+
 #levelBar {
   display: flex;
   justify-content: center;
@@ -125,7 +126,7 @@ button:hover { background: #1a7ae0; }
 
 .credit a { color: #aaa; }
 
-/* Game */
+/* ── Game ── */
 #game {
   padding: 0;
   position: relative;
@@ -219,7 +220,7 @@ button:hover { background: #1a7ae0; }
 
 #keyHints span:last-child { border-right: none; }
 
-/* Leaderboard */
+/* ── Leaderboard ── */
 #scoreList {
   list-style: none;
   counter-reset: rank;
@@ -261,7 +262,7 @@ button:hover { background: #1a7ae0; }
 
 #scoreList .empty::before { content: ""; }
 
-/* Game over */
+/* ── Game over ── */
 #nameEntry input {
   background: #222;
   border: 1px solid #444;
@@ -274,3 +275,72 @@ button:hover { background: #1a7ae0; }
 }
 
 #finalScore { color: #2d8cf0; font-weight: bold; }
+
+/* ── Mobile fixes ── */
+@media (max-width: 600px) {
+
+  #app {
+    margin-top: 0;
+    height: 100dvh;
+  }
+
+  #game {
+    height: 100dvh;
+  }
+
+  #hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px 4px;
+    background: rgba(17, 17, 17, 0.85);
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  #levelBar {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 1px;
+    font-size: 0.7em;
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 0;
+  }
+
+  .level-separator {
+    font-size: 0.4em;
+    letter-spacing: -3px;
+    opacity: 0.3;
+  }
+
+  #score {
+    font-size: 28px;
+    line-height: 1;
+    text-shadow: none;
+  }
+
+  #board {
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  #keyHints {
+    height: 80px;
+  }
+
+  #hitline {
+    bottom: 80px;
+  }
+
+  #keyHints span {
+    font-size: 18px;
+  }
+}
