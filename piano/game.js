@@ -176,104 +176,106 @@
     }
   }
 
-  async function saveToSupabase(scoreVal) {
-    if (typeof sb === 'undefined') {
-      console.log('Supabase not initialized');
+  async function saveToSupabase(name, scoreVal) {
+  if (typeof sb === 'undefined') {
+    console.log('Supabase not initialized');
+    return false;
+  }
+  
+  try {
+    const { data: { session }, error: sessionError } = await sb.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError);
       return false;
     }
     
-    try {
-      const { data: { session }, error: sessionError } = await sb.auth.getSession();
-      
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        return false;
-      }
-      
-      if (!session) {
-        console.log('No active session');
-        return false;
-      }
+    if (!session) {
+      console.log('No active session');
+      return false;
+    }
 
-      // Check existing score
-      const { data: existing, error: fetchError } = await sb
-        .from('scores')
-        .select('payload')
-        .eq('player_id', session.user.id)
-        .eq('game', 'piano')
-        .maybeSingle();
+    // Check existing score
+    const { data: existing, error: fetchError } = await sb
+      .from('scores')
+      .select('payload')
+      .eq('player_id', session.user.id)
+      .eq('game', 'piano')
+      .maybeSingle();
 
-      if (fetchError) {
-        console.error('Fetch error:', fetchError);
-        return false;
-      }
+    if (fetchError) {
+      console.error('Fetch error:', fetchError);
+      return false;
+    }
 
-      // Don't save if existing score is better
-      if (existing?.payload?.score >= scoreVal) {
-        console.log('Existing score is better, skipping save');
-        return true;
-      }
-
-      // Upsert new score
-      const { error: upsertError } = await sb
-        .from('scores')
-        .upsert({
-          player_id: session.user.id,
-          game: 'piano',
-          payload: { score: scoreVal }
-        }, { onConflict: 'player_id,game' });
-
-      if (upsertError) {
-        console.error('Upsert error:', upsertError);
-        return false;
-      }
-
-      console.log('Score saved to Supabase successfully');
+    // Don't save if existing score is better
+    if (existing?.payload?.score >= scoreVal) {
+      console.log('Existing score is better, skipping save');
       return true;
+    }
 
-    } catch (err) {
-      console.error('Unexpected error in saveToSupabase:', err);
+    // Upsert new score WITH NAME
+    const { error: upsertError } = await sb
+      .from('scores')
+      .upsert({
+        player_id: session.user.id,
+        game: 'piano',
+        payload: { score: scoreVal, name: name }  // ← Add name here!
+      }, { onConflict: 'player_id,game' });
+
+    if (upsertError) {
+      console.error('Upsert error:', upsertError);
       return false;
     }
+
+    console.log('Score saved to Supabase successfully');
+    return true;
+
+  } catch (err) {
+    console.error('Unexpected error in saveToSupabase:', err);
+    return false;
+  }
+}
+
+async function saveScore(name, scoreVal) {
+  // Save to Supabase first (if user is logged in)
+  const supabaseSuccess = await saveToSupabase(name, scoreVal);  // ← Pass name!
+  
+  if (!supabaseSuccess) {
+    console.log('Supabase save failed or skipped, saving to localStorage only');
   }
 
-  async function saveScore(name, scoreVal) {
-    // Save to Supabase first (if user is logged in)
-    const supabaseSuccess = await saveToSupabase(scoreVal);
-    
-    if (!supabaseSuccess) {
-      console.log('Supabase save failed or skipped, saving to localStorage only');
+  // Always save to localStorage as backup
+  const scores = loadScores();
+  scores.push({ name, score: scoreVal, date: Date.now() });
+  scores.sort((a, b) => b.score - a.score);
+  localStorage.setItem(LB_KEY, JSON.stringify(scores.slice(0, 10)));
+}
+
+async function renderLeaderboard() {
+  const list = document.getElementById('scoreList');
+  list.innerHTML = '<li class="empty">Loading…</li>';
+  try {
+    const { data, error } = await sb.rpc('get_leaderboard', { p_game: 'piano' });
+    list.innerHTML = '';
+    if (error || !data?.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'No scores yet — be the first!';
+      list.appendChild(li);
+      return;
     }
-
-    // Always save to localStorage as backup
-    const scores = loadScores();
-    scores.push({ name, score: scoreVal, date: Date.now() });
-    scores.sort((a, b) => b.score - a.score);
-    localStorage.setItem(LB_KEY, JSON.stringify(scores.slice(0, 10)));
-  }
-
-  async function renderLeaderboard() {
-    const list = document.getElementById('scoreList');
-    list.innerHTML = '<li class="empty">Loading…</li>';
-    try {
-      const { data, error } = await sb.rpc('get_leaderboard', { p_game: 'piano' });
-      list.innerHTML = '';
-      if (error || !data?.length) {
-        const li = document.createElement('li');
-        li.className = 'empty';
-        li.textContent = 'No scores yet — be the first!';
-        list.appendChild(li);
-        return;
-      }
-      for (const s of data) {
-        const li = document.createElement('li');
-        li.innerHTML = `<span class="name">${escapeHtml(s.display_name)}</span><span class="score">${s.payload.score}</span>`;
-        list.appendChild(li);
-      }
-    } catch {
-      list.innerHTML = '<li class="empty">Could not load leaderboard.</li>';
+    for (const s of data) {
+      const li = document.createElement('li');
+      // Use the name from payload if it exists, otherwise fallback to display_name
+      const displayName = s.payload?.name || s.display_name || 'Anonymous';
+      li.innerHTML = `<span class="name">${escapeHtml(displayName)}</span><span class="score">${s.payload.score}</span>`;
+      list.appendChild(li);
     }
+  } catch {
+    list.innerHTML = '<li class="empty">Could not load leaderboard.</li>';
   }
+}
 
   function escapeHtml(str) {
     const div = document.createElement('div');
