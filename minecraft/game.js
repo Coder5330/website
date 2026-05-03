@@ -1783,17 +1783,35 @@
     const uw = inWater();
     document.getElementById('underwaterOverlay').style.display = uw ? 'block' : 'none';
 
-    // Sky-light column: start at 15, drain per block above (leaves/water=1, solids=full)
-    const headY = Math.floor(player.pos.y) + 1;
-    const px = Math.floor(player.pos.x), pz = Math.floor(player.pos.z);
-    let skyLight = 15;
-    for (let sy = headY + 1; sy < WY && skyLight > 0; sy++) {
-      const b = getB(px, sy, pz);
-      if (b === LEAVES)     skyLight = Math.max(0, skyLight - 1);
-      else if (b === WATER) skyLight = Math.max(0, skyLight - 2);
-      else if (SOLID.has(b)) { skyLight = 0; break; }
+    // Sky-light at player: check nearby columns, attenuate by horizontal distance.
+    // Mimics Minecraft's sky light spreading sideways into cave entrances.
+    {
+      const py = Math.floor(player.pos.y) + 1;
+      const px = Math.floor(player.pos.x), pz = Math.floor(player.pos.z);
+      const R = 12;
+      let bestSky = 0;
+      outer: for (let dx = -R; dx <= R; dx++) {
+        for (let dz = -R; dz <= R; dz++) {
+          const hDist = Math.abs(dx) + Math.abs(dz);
+          if (hDist > R) continue;
+          // Sky light at player's Y level in this column (scan down from sky)
+          let colLight = 15;
+          for (let sy = WY - 1; sy > py && colLight > 0; sy--) {
+            const b = getB(px + dx, sy, pz + dz);
+            if      (b === LEAVES) colLight = Math.max(0, colLight - 1);
+            else if (b === WATER)  colLight = Math.max(0, colLight - 2);
+            else if (SOLID.has(b)) { colLight = 0; break; }
+          }
+          const effective = Math.max(0, colLight - hDist);
+          if (effective > bestSky) {
+            bestSky = effective;
+            if (bestSky >= 15) break outer;
+          }
+        }
+      }
+      const targetIntensity = 0.15 + (bestSky / 15) * (1.1 - 0.15);
+      ambientLight.intensity += (targetIntensity - ambientLight.intensity) * Math.min(1, dt * 5);
     }
-    ambientLight.intensity = 0.15 + (skyLight / 15) * (1.1 - 0.15);
 
     moveBcastTimer += dt;
     if (moveBcastTimer > 0.05) {
