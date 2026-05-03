@@ -10,11 +10,12 @@
                          COAL_ORE,IRON_ORE,COPPER_ORE,GOLD_ORE,REDSTONE_ORE,DIAMOND_ORE]);
 
   // ── World dims (chunked, infinite) ───────────────────────────────────────
-  const CHUNK_W = 16;
+  const CHUNK_W = 32;
   const WY = 64;
   const SEA_LEVEL = 14;
   const ATLAS_LAYERS = 8;
-  const RENDER_DIST = 2; // generate this many chunks beyond player chunk
+  const MESH_DIST = 3;  // build visible meshes within this chunk radius
+  const GEN_DIST  = 4;  // pre-generate data one ring beyond so edge faces cull correctly
 
   // ── Tool items ───────────────────────────────────────────────────────────
   const ITEM_WOOD_PICK=101, ITEM_STONE_PICK=102, ITEM_IRON_PICK=103, ITEM_DIAMOND_PICK=104;
@@ -160,9 +161,9 @@
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x88c5ff);
-  scene.fog = new THREE.Fog(0x88c5ff, 60, 160);
+  scene.fog = new THREE.Fog(0x88c5ff, 100, 240);
 
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 500);
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 800);
   scene.add(camera);
 
   scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x6b4f31, 0.85));
@@ -533,31 +534,47 @@
     if (pcx === lastChunkX && pcz === lastChunkZ) return;
     lastChunkX = pcx; lastChunkZ = pcz;
 
-    // Generate any missing chunks within range
-    for (let dz = -RENDER_DIST; dz <= RENDER_DIST; dz++) {
-      for (let dx = -RENDER_DIST; dx <= RENDER_DIST; dx++) {
+    // Pre-generate data for GEN_DIST radius (includes one ring beyond visible meshes
+    // so edge-face culling works correctly and there's no seam at the fog boundary)
+    for (let dz = -GEN_DIST; dz <= GEN_DIST; dz++) {
+      for (let dx = -GEN_DIST; dx <= GEN_DIST; dx++) {
         const cx = pcx + dx, cz = pcz + dz;
         const k = ckey(cx, cz);
         if (!chunks.has(k)) {
           chunks.set(k, generateChunk(cx, cz));
-          chunkMeshes.set(k, { meshes:{}, dirty:true });
-          // edges of newly-created chunk affect neighbour faces
+          // Only register a mesh entry if within visible range
+          if (Math.abs(dx) <= MESH_DIST && Math.abs(dz) <= MESH_DIST) {
+            chunkMeshes.set(k, { meshes:{}, dirty:true });
+          }
+          // Generating this chunk may expose new faces on neighbours that have meshes
           markChunkDirty(cx-1, cz); markChunkDirty(cx+1, cz);
           markChunkDirty(cx, cz-1); markChunkDirty(cx, cz+1);
+        } else if (Math.abs(dx) <= MESH_DIST && Math.abs(dz) <= MESH_DIST
+                   && !chunkMeshes.has(k)) {
+          // Chunk data existed but no mesh yet (was in outer ring before)
+          chunkMeshes.set(k, { meshes:{}, dirty:true });
         }
       }
     }
-    // Unload chunks far away
+
+    // Unload chunks that are too far away
     for (const k of [...chunks.keys()]) {
       const [cx, cz] = k.split(',').map(Number);
-      if (Math.abs(cx - pcx) > RENDER_DIST + 1 || Math.abs(cz - pcz) > RENDER_DIST + 1) {
+      if (Math.abs(cx - pcx) > GEN_DIST + 1 || Math.abs(cz - pcz) > GEN_DIST + 1) {
         disposeChunkMeshes(cx, cz);
         chunks.delete(k);
       }
     }
+    // Remove mesh entries for chunks that drifted outside MESH_DIST
+    for (const k of [...chunkMeshes.keys()]) {
+      const [cx, cz] = k.split(',').map(Number);
+      if (Math.abs(cx - pcx) > MESH_DIST || Math.abs(cz - pcz) > MESH_DIST) {
+        disposeChunkMeshes(cx, cz);
+      }
+    }
   }
 
-  function processDirtyChunks(maxPerFrame = 2) {
+  function processDirtyChunks(maxPerFrame = 3) {
     let n = 0;
     for (const [k, entry] of chunkMeshes) {
       if (!entry.dirty) continue;
@@ -570,7 +587,7 @@
   // ── Spawn search ─────────────────────────────────────────────────────────
   function findSpawn() {
     // Search outward from origin for a non-water grass/dirt surface
-    for (let r = 0; r < CHUNK_W * (RENDER_DIST + 1); r++) {
+    for (let r = 0; r < CHUNK_W * (MESH_DIST + 1); r++) {
       for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
         const x = dx, z = dz;
