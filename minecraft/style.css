@@ -121,6 +121,15 @@ body {
   white-space: nowrap;
 }
 
+#underwaterOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 40, 130, 0.45);
+  pointer-events: none;
+  display: none;
+  z-index: 3;
+}
+
 .lock-hint {
   position: absolute;
   bottom: 80px;

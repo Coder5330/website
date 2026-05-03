@@ -199,10 +199,7 @@
   waterTex.minFilter = THREE.NearestFilter;
   waterTex.colorSpace = THREE.SRGBColorSpace;
 
-  const ctTex = new THREE.TextureLoader().load('assets/crafting_table.png');
-  ctTex.magFilter = THREE.NearestFilter;
-  ctTex.minFilter = THREE.NearestFilter;
-  ctTex.colorSpace = THREE.SRGBColorSpace;
+  // ctTex is built from the 3rd panel of the sprite sheet (loaded below via ctImg)
 
   function makeBlockGeo(id) {
     const g = new THREE.BoxGeometry(1, 1, 1);
@@ -238,7 +235,7 @@
     map: waterTex, color: 0x99ccff, transparent: true, opacity: 0.78, depthWrite: false,
     side: THREE.DoubleSide,
   });
-  const craftingTableMat = new THREE.MeshLambertMaterial({ map: ctTex });
+  const craftingTableMat = new THREE.MeshLambertMaterial({ color: 0x8b6340 }); // placeholder until sprite loads
 
   // Ore textures
   const oreMaterials = {};
@@ -275,13 +272,25 @@
   };
   oreImg.src = 'assets/tex_array_1.png';
 
-  // Crafting-table thumbnail
+  // Crafting-table texture + thumbnail (sprite sheet: 3 panels wide, take panel 3)
   const ctImg = new Image();
   ctImg.onload = () => {
+    const panelW = Math.floor(ctImg.width / 3);
+    const sx = 2 * panelW; // 3rd panel (0-indexed)
+    // Texture
+    const texC = document.createElement('canvas'); texC.width = texC.height = 64;
+    const texCtx = texC.getContext('2d'); texCtx.imageSmoothingEnabled = false;
+    texCtx.drawImage(ctImg, sx, 0, panelW, ctImg.height, 0, 0, 64, 64);
+    const ctTex = new THREE.CanvasTexture(texC);
+    ctTex.magFilter = THREE.NearestFilter; ctTex.minFilter = THREE.NearestFilter;
+    ctTex.colorSpace = THREE.SRGBColorSpace;
+    craftingTableMat.map = ctTex;
+    craftingTableMat.color.setHex(0xffffff);
+    craftingTableMat.needsUpdate = true;
+    // Thumbnail
     const c = document.createElement('canvas'); c.width = c.height = 32;
-    const cx = c.getContext('2d');
-    cx.imageSmoothingEnabled = false;
-    cx.drawImage(ctImg, 0, 0, ctImg.width, ctImg.height, 0, 0, 32, 32);
+    const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
+    cx.drawImage(ctImg, sx, 0, panelW, ctImg.height, 0, 0, 32, 32);
     blockThumbs[CRAFTING_TABLE] = c.toDataURL();
     if (running) markAllChunksDirty();
     updateHotbarUI();
@@ -422,7 +431,7 @@
   const BIOMES = {
     forest:   { baseH:20, mtnAmp:32, hillAmp:12, detAmp:4, surf:GRASS, snowH:54, treeRate:0.028 },
     plains:   { baseH:18, mtnAmp:10, hillAmp:4,  detAmp:2, surf:GRASS, snowH:54, treeRate:0.005 },
-    savanna:  { baseH:19, mtnAmp:16, hillAmp:8,  detAmp:3, surf:GRASS, snowH:999,treeRate:0.006 },
+    savanna:  { baseH:19, mtnAmp:16, hillAmp:8,  detAmp:3, surf:GRASS, snowH:999,treeRate:0.018 },
     desert:   { baseH:17, mtnAmp:14, hillAmp:7,  detAmp:3, surf:SAND,  snowH:999,treeRate:0     },
     cold:     { baseH:17, mtnAmp:14, hillAmp:5,  detAmp:2, surf:SNOW,  snowH:10, treeRate:0.005 },
     mountain: { baseH:30, mtnAmp:50, hillAmp:14, detAmp:5, surf:STONE, snowH:48, treeRate:0.009 },
@@ -1710,10 +1719,7 @@
     waterTex.offset.x = waterAnimT * 0.5;
 
     const uw = inWater();
-    scene.background.setHex(uw ? 0x003366 : 0x88c5ff);
-    scene.fog.color.setHex(uw ? 0x003366 : 0x88c5ff);
-    scene.fog.near = uw ? 2  : 100;
-    scene.fog.far  = uw ? 16 : 240;
+    document.getElementById('underwaterOverlay').style.display = uw ? 'block' : 'none';
 
     moveBcastTimer += dt;
     if (moveBcastTimer > 0.05) {
