@@ -562,20 +562,26 @@
       }
     }
 
-    // Cave carving: two independent 3D noise fields; carve where both pass near 0.5
+    // Cave carving
     for (let lz = 0; lz < CHUNK_W; lz++) {
       for (let lx = 0; lx < CHUNK_W; lx++) {
         const wx = cx * CHUNK_W + lx, wz = cz * CHUNK_W + lz;
         const h = heights[lz * CHUNK_W + lx];
         for (let y = 2; y < h - 4; y++) {
+          const idx = (y * CHUNK_W + lz) * CHUNK_W + lx;
+          // Worm tunnels: carve where both noise fields pass near 0.5
           const n1 = noise3(wx, y, wz, 0.04, worldSeed ^ 0xc0ffee);
           const n2 = noise3(wx, y, wz, 0.04, worldSeed ^ 0xdeadbe);
-          if (Math.abs(n1 - 0.5) < 0.09 && Math.abs(n2 - 0.5) < 0.09)
-            buf[(y * CHUNK_W + lz) * CHUNK_W + lx] = AIR;
-          // Extra large caverns at lower depths
+          if (Math.abs(n1 - 0.5) < 0.13 && Math.abs(n2 - 0.5) < 0.13)
+            { buf[idx] = AIR; continue; }
+          // Cheese caverns: large blobs at all depths
           const n3 = noise3(wx, y, wz, 0.025, worldSeed ^ 0xf00d);
-          if (y < h * 0.55 && n3 > 0.78)
-            buf[(y * CHUNK_W + lz) * CHUNK_W + lx] = AIR;
+          if (n3 > 0.76)
+            { buf[idx] = AIR; continue; }
+          // Spaghetti caves: long narrow tunnels
+          const n4 = noise3(wx, y, wz, 0.06, worldSeed ^ 0x5ca1ab1e);
+          if (Math.abs(n4 - 0.5) < 0.055)
+            buf[idx] = AIR;
         }
       }
     }
@@ -1777,14 +1783,17 @@
     const uw = inWater();
     document.getElementById('underwaterOverlay').style.display = uw ? 'block' : 'none';
 
-    // Dim ambient when underground (no sky access above player's head)
+    // Sky-light column: start at 15, drain per block above (leaves/water=1, solids=full)
     const headY = Math.floor(player.pos.y) + 1;
     const px = Math.floor(player.pos.x), pz = Math.floor(player.pos.z);
-    let hasSky = true;
-    for (let sy = headY + 1; sy < WY; sy++) {
-      if (SOLID.has(getB(px, sy, pz))) { hasSky = false; break; }
+    let skyLight = 15;
+    for (let sy = headY + 1; sy < WY && skyLight > 0; sy++) {
+      const b = getB(px, sy, pz);
+      if (b === LEAVES)     skyLight = Math.max(0, skyLight - 1);
+      else if (b === WATER) skyLight = Math.max(0, skyLight - 2);
+      else if (SOLID.has(b)) { skyLight = 0; break; }
     }
-    ambientLight.intensity = hasSky ? 1.1 : 0.15;
+    ambientLight.intensity = 0.15 + (skyLight / 15) * (1.1 - 0.15);
 
     moveBcastTimer += dt;
     if (moveBcastTimer > 0.05) {
