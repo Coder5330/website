@@ -438,6 +438,20 @@
     return ((hash2(xi,zi,salt)*(1-u) + hash2(xi+1,zi,salt)*u) * (1-v)
           + (hash2(xi,zi+1,salt)*(1-u) + hash2(xi+1,zi+1,salt)*u) * v);
   }
+  function hash3(a, b, c, salt) {
+    let n = ((a|0)*374761393) ^ ((b|0)*668265263) ^ ((c|0)*1440009) ^ (salt|0);
+    n = (n ^ (n>>13)) * 1274126177 | 0;
+    return ((n ^ (n>>16)) >>> 0) / 0xffffffff;
+  }
+  function noise3(x, y, z, freq, salt) {
+    const xi=Math.floor(x*freq),yi=Math.floor(y*freq),zi=Math.floor(z*freq);
+    const xf=x*freq-xi, yf=y*freq-yi, zf=z*freq-zi;
+    const ux=xf*xf*(3-2*xf), uy=yf*yf*(3-2*yf), uz=zf*zf*(3-2*zf);
+    return (hash3(xi,  yi,  zi,  salt)*(1-ux)+hash3(xi+1,yi,  zi,  salt)*ux)*(1-uy)*(1-uz)
+         + (hash3(xi,  yi+1,zi,  salt)*(1-ux)+hash3(xi+1,yi+1,zi,  salt)*ux)*   uy *(1-uz)
+         + (hash3(xi,  yi,  zi+1,salt)*(1-ux)+hash3(xi+1,yi,  zi+1,salt)*ux)*(1-uy)*   uz
+         + (hash3(xi,  yi+1,zi+1,salt)*(1-ux)+hash3(xi+1,yi+1,zi+1,salt)*ux)*   uy *   uz;
+  }
   // ── Biomes ───────────────────────────────────────────────────────────────
   const BIOMES = {
     forest:   { baseH:20, mtnAmp:36, hillAmp:16, detAmp:5, surf:GRASS, snowH:54, treeRate:0.040 },
@@ -548,6 +562,24 @@
       }
     }
 
+    // Cave carving: two independent 3D noise fields; carve where both pass near 0.5
+    for (let lz = 0; lz < CHUNK_W; lz++) {
+      for (let lx = 0; lx < CHUNK_W; lx++) {
+        const wx = cx * CHUNK_W + lx, wz = cz * CHUNK_W + lz;
+        const h = heights[lz * CHUNK_W + lx];
+        for (let y = 2; y < h - 4; y++) {
+          const n1 = noise3(wx, y, wz, 0.04, worldSeed ^ 0xc0ffee);
+          const n2 = noise3(wx, y, wz, 0.04, worldSeed ^ 0xdeadbe);
+          if (Math.abs(n1 - 0.5) < 0.09 && Math.abs(n2 - 0.5) < 0.09)
+            buf[(y * CHUNK_W + lz) * CHUNK_W + lx] = AIR;
+          // Extra large caverns at lower depths
+          const n3 = noise3(wx, y, wz, 0.025, worldSeed ^ 0xf00d);
+          if (y < h * 0.55 && n3 > 0.78)
+            buf[(y * CHUNK_W + lz) * CHUNK_W + lx] = AIR;
+        }
+      }
+    }
+
     // Trees (deterministic per chunk via salted RNG)
     let s = (cx * 73856093) ^ (cz * 19349663) ^ worldSeed;
     const rng = () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) / 0xffffffff); };
@@ -574,12 +606,12 @@
 
     // Ore veins
     const oreSpec = [
-      { id: COAL_ORE,     minY: 4,  maxY: 36, count: 8, vein: 5 },
-      { id: COPPER_ORE,   minY: 4,  maxY: 32, count: 5, vein: 5 },
-      { id: IRON_ORE,     minY: 3,  maxY: 28, count: 6, vein: 4 },
-      { id: GOLD_ORE,     minY: 2,  maxY: 16, count: 3, vein: 4 },
-      { id: REDSTONE_ORE, minY: 2,  maxY: 14, count: 3, vein: 5 },
-      { id: DIAMOND_ORE,  minY: 2,  maxY: 10, count: 2, vein: 3 },
+      { id: COAL_ORE,     minY: 4,  maxY: 36, count: 32, vein: 8 },
+      { id: COPPER_ORE,   minY: 4,  maxY: 32, count: 18, vein: 7 },
+      { id: IRON_ORE,     minY: 3,  maxY: 28, count: 24, vein: 7 },
+      { id: GOLD_ORE,     minY: 2,  maxY: 16, count: 10, vein: 6 },
+      { id: REDSTONE_ORE, minY: 2,  maxY: 14, count: 10, vein: 6 },
+      { id: DIAMOND_ORE,  minY: 2,  maxY: 10, count:  6, vein: 5 },
     ];
     for (const spec of oreSpec) {
       for (let i = 0; i < spec.count; i++) {
