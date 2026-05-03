@@ -1687,7 +1687,6 @@
       const [cx, cz] = k.split(',').map(Number);
       buildChunkMesh(cx, cz);
     }
-    _pmBody.material.color.setHex(myColor);
     running = true;
     document.getElementById('lobbyPanel').style.display = 'none';
     document.getElementById('waitPanel').style.display = 'none';
