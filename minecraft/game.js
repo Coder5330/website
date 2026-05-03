@@ -94,7 +94,7 @@
   };
   const BLOCK_HARDNESS = {
     [SAND]: 0.5, [GRASS]: 0.6, [DIRT]: 0.5, [SNOW]: 0.1,
-    [WOOD]: 2.0, [LEAVES]: 0.2, [STONE]: 1.5, [CRAFTING_TABLE]: 2.5,
+    [WOOD]: 0.9, [LEAVES]: 0.2, [STONE]: 1.5, [CRAFTING_TABLE]: 1.5,
     [COAL_ORE]: 3.0, [IRON_ORE]: 3.0, [COPPER_ORE]: 3.0,
     [GOLD_ORE]: 3.0, [REDSTONE_ORE]: 3.0, [DIAMOND_ORE]: 3.0,
     [BEDROCK]: Infinity,
@@ -117,8 +117,7 @@
     const t = itemId != null ? TOOLS[itemId] : null;
     let speedMultiplier = 1;
     if (t && t.kind === BLOCK_TOOL[block]) speedMultiplier = TIER_SPEED[t.tier];
-    if (inWater())          speedMultiplier *= 0.2;
-    if (!player.grounded)   speedMultiplier /= 5;
+    if (inWater()) speedMultiplier *= 0.2;
     let damage = speedMultiplier / hardness;
     damage /= canHarvest(block, itemId) ? 30 : 100;
     if (damage >= 1) return 0;
@@ -225,14 +224,15 @@
   for (const id of ATLAS_BLOCKS) blockGeos[id] = makeBlockGeo(id);
   blockGeos[BEDROCK] = blockGeos[STONE];
   blockGeos[WATER]   = new THREE.BoxGeometry(1, 1, 1);
-  blockGeos[CRAFTING_TABLE] = new THREE.BoxGeometry(1, 1, 1);
+  blockGeos[CRAFTING_TABLE] = makeBlockGeo(WOOD); // wood UVs, distinctive tint via material
   for (const id of ORES) blockGeos[id] = new THREE.BoxGeometry(1, 1, 1);
 
   const blockMaterial = new THREE.MeshLambertMaterial({ map: atlasTex });
   const waterMaterial = new THREE.MeshLambertMaterial({
     map: waterTex, color: 0x99ccff, transparent: true, opacity: 0.78, depthWrite: false,
   });
-  const craftingTableMat = new THREE.MeshLambertMaterial({ map: ctTex });
+  // Tinted wood-atlas material to distinguish crafting table visually
+  const craftingTableMat = new THREE.MeshLambertMaterial({ map: atlasTex, color: 0x8b4513 });
 
   // Ore textures
   const oreMaterials = {};
@@ -366,36 +366,111 @@
     return ((hash2(xi,zi,salt)*(1-u) + hash2(xi+1,zi,salt)*u) * (1-v)
           + (hash2(xi,zi+1,salt)*(1-u) + hash2(xi+1,zi+1,salt)*u) * v);
   }
-  function heightAt(x, z) {
-    // Mountains: large slow features
-    let h = 18;
-    h += (noise2(x, z, 0.012, worldSeed)        - 0.35) * 56; // mountain ridges, can dip negative for valleys
-    h += noise2(x, z, 0.045, worldSeed^0x9e37)  * 14;          // hills
-    h += noise2(x, z, 0.18,  worldSeed^0x12af)  * 4;           // detail
+  // ── Biomes ───────────────────────────────────────────────────────────────
+  const BIOMES = {
+    forest:   { baseH:20, mtnAmp:32, hillAmp:12, detAmp:4, surf:GRASS, snowH:54, treeRate:0.028 },
+    plains:   { baseH:18, mtnAmp:10, hillAmp:4,  detAmp:2, surf:GRASS, snowH:54, treeRate:0.005 },
+    savanna:  { baseH:19, mtnAmp:16, hillAmp:8,  detAmp:3, surf:GRASS, snowH:999,treeRate:0.006 },
+    desert:   { baseH:17, mtnAmp:14, hillAmp:7,  detAmp:3, surf:SAND,  snowH:999,treeRate:0     },
+    cold:     { baseH:17, mtnAmp:14, hillAmp:5,  detAmp:2, surf:SNOW,  snowH:10, treeRate:0.005 },
+    mountain: { baseH:30, mtnAmp:50, hillAmp:14, detAmp:5, surf:STONE, snowH:48, treeRate:0.009 },
+  };
+  function getBiome(wx, wz) {
+    const temp  = noise2(wx, wz, 0.0025, worldSeed ^ 0xbabe1);
+    const rough = noise2(wx, wz, 0.003,  worldSeed ^ 0xdead3);
+    const moist = noise2(wx, wz, 0.0025, worldSeed ^ 0xcafe2);
+    if (rough > 0.72) return 'mountain';
+    if (temp > 0.68 && moist < 0.38) return 'desert';
+    if (temp > 0.58) return 'savanna';
+    if (temp < 0.28) return 'cold';
+    if (moist < 0.38) return 'plains';
+    return 'forest';
+  }
+  function heightAt(wx, wz, biome) {
+    const b = BIOMES[biome];
+    let h = b.baseH;
+    h += (noise2(wx, wz, 0.012, worldSeed)       - 0.35) * b.mtnAmp;
+    h += noise2(wx, wz, 0.045, worldSeed^0x9e37) * b.hillAmp;
+    h += noise2(wx, wz, 0.18,  worldSeed^0x12af) * b.detAmp;
     return Math.max(2, Math.min(WY - 4, Math.floor(h)));
+  }
+
+  // ── Leaf decay ───────────────────────────────────────────────────────────
+  const playerPlaced   = new Set(); // "x,y,z" keys of player-placed blocks
+  const decayScheduled = new Set();
+  const decayQueue     = []; // {x,y,z,at}
+
+  function leafCanReachWood(sx, sy, sz) {
+    const visited = new Set();
+    const queue = [[sx, sy, sz, 0]];
+    while (queue.length) {
+      const [x, y, z, d] = queue.shift();
+      const k = ek(x,y,z);
+      if (visited.has(k)) continue;
+      visited.add(k);
+      const b = getB(x,y,z);
+      if (b === WOOD) return true;
+      if (b !== LEAVES || d >= 7) continue;
+      queue.push([x+1,y,z,d+1],[x-1,y,z,d+1],[x,y+1,z,d+1],
+                 [x,y-1,z,d+1],[x,y,z+1,d+1],[x,y,z-1,d+1]);
+    }
+    return false;
+  }
+  function queueLeafDecay(bx, by, bz) {
+    const R = 7;
+    for (let dy=-R; dy<=R; dy++) for (let dx=-R; dx<=R; dx++) for (let dz=-R; dz<=R; dz++) {
+      const x=bx+dx, y=by+dy, z=bz+dz;
+      const k = ek(x,y,z);
+      if (decayScheduled.has(k) || playerPlaced.has(k)) continue;
+      if (getB(x,y,z) !== LEAVES) continue;
+      if (!leafCanReachWood(x,y,z)) {
+        decayScheduled.add(k);
+        // Stagger decay: 4-6 minutes
+        decayQueue.push({ x, y, z, at: Date.now() + (240 + Math.random()*120) * 1000 });
+      }
+    }
+  }
+  function processLeafDecay() {
+    const now = Date.now();
+    for (let i = decayQueue.length - 1; i >= 0; i--) {
+      const d = decayQueue[i];
+      if (now < d.at) continue;
+      decayScheduled.delete(ek(d.x,d.y,d.z));
+      decayQueue.splice(i, 1);
+      if (getB(d.x,d.y,d.z) === LEAVES && !playerPlaced.has(ek(d.x,d.y,d.z))) {
+        setB(d.x, d.y, d.z, AIR);
+        bcast('block', { x:d.x, y:d.y, z:d.z, v:AIR });
+      }
+    }
   }
 
   // ── Generate one chunk ───────────────────────────────────────────────────
   function generateChunk(cx, cz) {
     const buf = new Uint8Array(CHUNK_W * WY * CHUNK_W);
     const set = (lx, y, lz, v) => { buf[(y * CHUNK_W + lz) * CHUNK_W + lx] = v; };
+    // Sample biome at chunk centre for consistent surface rules
+    const biome = getBiome(cx * CHUNK_W + CHUNK_W/2, cz * CHUNK_W + CHUNK_W/2);
+    const bp = BIOMES[biome];
 
     const heights = new Int32Array(CHUNK_W * CHUNK_W);
+    const biomes  = new Array(CHUNK_W * CHUNK_W);
     for (let lz = 0; lz < CHUNK_W; lz++) {
       for (let lx = 0; lx < CHUNK_W; lx++) {
         const wx = cx * CHUNK_W + lx, wz = cz * CHUNK_W + lz;
-        const h = heightAt(wx, wz);
+        const col_biome = getBiome(wx, wz);
+        const col_bp = BIOMES[col_biome];
+        const h = heightAt(wx, wz, col_biome);
         heights[lz * CHUNK_W + lx] = h;
+        biomes[lz * CHUNK_W + lx]  = col_biome;
         for (let y = 0; y < h; y++) {
           if (y === 0) set(lx, y, lz, BEDROCK);
           else if (y < h - 4) set(lx, y, lz, STONE);
           else set(lx, y, lz, DIRT);
         }
         const surf = h - 1;
-        if (h >= WY - 12)            set(lx, surf, lz, SNOW);
-        else if (surf <= SEA_LEVEL + 1) set(lx, surf, lz, SAND);
-        else                            set(lx, surf, lz, GRASS);
-        // Water fill ONLY where ground sank below sea level (oases / valleys)
+        if (surf >= col_bp.snowH)          set(lx, surf, lz, SNOW);
+        else if (surf <= SEA_LEVEL + 1)    set(lx, surf, lz, SAND);
+        else                               set(lx, surf, lz, col_bp.surf);
         for (let y = h; y <= SEA_LEVEL; y++) set(lx, y, lz, WATER);
       }
     }
@@ -407,8 +482,9 @@
       for (let lx = 2; lx < CHUNK_W - 2; lx++) {
         const h = heights[lz * CHUNK_W + lx];
         const surf = h - 1;
+        const col_bp = BIOMES[biomes[lz * CHUNK_W + lx]];
         if (buf[(surf * CHUNK_W + lz) * CHUNK_W + lx] !== GRASS) continue;
-        if (rng() > 0.022) continue;
+        if (rng() > col_bp.treeRate) continue;
         const th = 4 + Math.floor(rng() * 2);
         for (let dy = 0; dy < th; dy++) if (h + dy < WY) set(lx, h + dy, lz, WOOD);
         for (let dy = -1; dy <= 1; dy++) for (let dx = -2; dx <= 2; dx++) for (let dzz = -2; dzz <= 2; dzz++) {
@@ -757,6 +833,7 @@
         else if (r < 0.07) spawnItemDrop(bx+0.5, by+0.5, bz+0.5, ITEM_APPLE);
       } else if (canHarvest(blk, mining.tool)) {
         spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk);
+        if (blk === WOOD) queueLeafDecay(bx, by, bz);
       }
       mining = null;
       crackMesh.visible = false;
@@ -781,6 +858,7 @@
     if (dx < PW + 0.5 && dz < PW + 0.5 && overlapY) return;
     const blk = slot.block;
     setB(px, py, pz, blk);
+    playerPlaced.add(ek(px, py, pz));
     slot.count--;
     if (slot.count <= 0) inventory[hotbarSlot] = null;
     updateHotbarUI();
@@ -1184,9 +1262,21 @@
     cx.fillStyle = '#228822'; cx.fillRect(14, 5, 4, 8);
     return c.toDataURL();
   }
+  // Set canvas fallbacks immediately, then upgrade if image files exist
   itemThumbs[ITEM_PLANK] = makePlankThumb();
   itemThumbs[ITEM_STICK] = makeStickThumb();
   itemThumbs[ITEM_APPLE] = makeAppleThumb();
+  for (const [src, id] of [['assets/plank.png', ITEM_PLANK], ['assets/stick.png', ITEM_STICK]]) {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = 32;
+      const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
+      cx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 32, 32);
+      itemThumbs[id] = c.toDataURL();
+      updateHotbarUI();
+    };
+    img.src = src;
+  }
 
   function buildHotbarUI() {
     const el = document.getElementById('hotbar');
@@ -1354,17 +1444,14 @@
     resCell.addEventListener('mousedown', e => {
       e.preventDefault();
       if (!craftResult) return;
-      const out = makeOutputItem(matchRecipe());
-      if (!out) return;
-      if (cursorItem) {
-        // Only add if same type
-        if (cursorItem.kind === out.kind &&
-            (cursorItem.kind==='tool' ? cursorItem.id===out.id :
-             (cursorItem.kind==='block' ? cursorItem.block===out.block : cursorItem.id===out.id))
-            && cursorItem.kind !== 'tool') {
-          cursorItem.count += out.count;
-        } else return;
-      } else cursorItem = out;
+      const r = matchRecipe(); if (!r) return;
+      const out = makeOutputItem(r);
+      // Send straight to inventory, not to cursor
+      let added = false;
+      if (out.kind === 'tool')       added = addTool(out.id);
+      else if (out.kind === 'block') added = addStackable('block', out.block, out.count);
+      else                           added = addStackable('item',  out.id,    out.count);
+      if (!added) return;
       consumeGridOnce();
       recomputeCraftResult();
       updateInventoryUI();
@@ -1477,10 +1564,11 @@
     const dt = Math.min((now - last) / 1000, 0.05); last = now;
     tick(dt);
     updateChunks();
-    processDirtyChunks(2);
+    processDirtyChunks(3);
     updateMining(dt);
     updateDrops(dt);
     updateHand(dt);
+    processLeafDecay();
 
     waterAnimT += dt * 0.18;
     waterTex.offset.y = -waterAnimT;
