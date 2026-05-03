@@ -227,7 +227,23 @@
   for (const id of ATLAS_BLOCKS) blockGeos[id] = makeBlockGeo(id);
   blockGeos[BEDROCK] = blockGeos[STONE];
   blockGeos[WATER]   = new THREE.BoxGeometry(1, 1, 1);
-  blockGeos[CRAFTING_TABLE] = new THREE.BoxGeometry(1, 1, 1);
+  // Crafting table: custom UVs so each face uses the correct 1/3 strip of the sprite sheet.
+  // Strip order in the 384×128 PNG: 0=side, 1=front, 2=top(3×3 grid).
+  // BoxGeometry face order: +X, -X, +Y(top), -Y(bot), +Z(front), -Z(back)
+  blockGeos[CRAFTING_TABLE] = (() => {
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const uv = geo.attributes.uv;
+    const strips = [0, 0, 2, 0, 1, 0]; // panel index per face
+    for (let face = 0; face < 6; face++) {
+      const u0 = strips[face] / 3, u1 = u0 + 1 / 3;
+      for (let j = 0; j < 4; j++) {
+        const i = face * 4 + j;
+        uv.setX(i, u0 + uv.getX(i) * (u1 - u0));
+      }
+    }
+    uv.needsUpdate = true;
+    return geo;
+  })();
   for (const id of ORES) blockGeos[id] = new THREE.BoxGeometry(1, 1, 1);
 
   const blockMaterial = new THREE.MeshLambertMaterial({ map: atlasTex });
@@ -276,24 +292,16 @@
   // Panel 0 = side, panel 1 = front/side, panel 2 = top (3x3 grid)
   const ctImg = new Image();
   ctImg.onload = () => {
-    const pw = Math.floor(ctImg.width / 3), ph = ctImg.height;
-    function ctPanel(px) {
-      const c = document.createElement('canvas'); c.width = c.height = 64;
-      const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(ctImg, px, 0, pw, ph, 0, 0, 64, 64);
-      const t = new THREE.CanvasTexture(c);
-      t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
-      t.colorSpace = THREE.SRGBColorSpace;
-      return new THREE.MeshLambertMaterial({ map: t });
-    }
-    const side = ctPanel(0), front = ctPanel(pw), top = ctPanel(pw * 2);
-    // Three.js face order: +X, -X, +Y(top), -Y(bot), +Z, -Z
-    craftingTableMat = [side, side, top, side, front, front];
-    // Thumbnail: use top face
-    const c = document.createElement('canvas'); c.width = c.height = 32;
-    const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
-    cx.drawImage(ctImg, pw * 2, 0, pw, ph, 0, 0, 32, 32);
-    blockThumbs[CRAFTING_TABLE] = c.toDataURL();
+    const tex = new THREE.Texture(ctImg);
+    tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+    tex.colorSpace = THREE.SRGBColorSpace; tex.needsUpdate = true;
+    craftingTableMat = new THREE.MeshLambertMaterial({ map: tex });
+    // Thumbnail: use top face (right third of sprite)
+    const pw = Math.floor(ctImg.width / 3);
+    const tc = document.createElement('canvas'); tc.width = tc.height = 32;
+    const tcx = tc.getContext('2d'); tcx.imageSmoothingEnabled = false;
+    tcx.drawImage(ctImg, pw * 2, 0, pw, ctImg.height, 0, 0, 32, 32);
+    blockThumbs[CRAFTING_TABLE] = tc.toDataURL();
     if (running) markAllChunksDirty();
     updateHotbarUI();
   };
@@ -431,12 +439,12 @@
   }
   // ── Biomes ───────────────────────────────────────────────────────────────
   const BIOMES = {
-    forest:   { baseH:20, mtnAmp:32, hillAmp:12, detAmp:4, surf:GRASS, snowH:54, treeRate:0.028 },
-    plains:   { baseH:18, mtnAmp:10, hillAmp:4,  detAmp:2, surf:GRASS, snowH:54, treeRate:0.005 },
-    savanna:  { baseH:19, mtnAmp:16, hillAmp:8,  detAmp:3, surf:GRASS, snowH:999,treeRate:0.018 },
-    desert:   { baseH:17, mtnAmp:14, hillAmp:7,  detAmp:3, surf:SAND,  snowH:999,treeRate:0     },
-    cold:     { baseH:17, mtnAmp:14, hillAmp:5,  detAmp:2, surf:SNOW,  snowH:10, treeRate:0.005 },
-    mountain: { baseH:30, mtnAmp:50, hillAmp:14, detAmp:5, surf:STONE, snowH:48, treeRate:0.009 },
+    forest:   { baseH:20, mtnAmp:36, hillAmp:16, detAmp:5, surf:GRASS, snowH:54, treeRate:0.040 },
+    plains:   { baseH:18, mtnAmp:12, hillAmp:6,  detAmp:3, surf:GRASS, snowH:54, treeRate:0.005 },
+    savanna:  { baseH:19, mtnAmp:20, hillAmp:10, detAmp:4, surf:GRASS, snowH:999,treeRate:0.040 },
+    desert:   { baseH:17, mtnAmp:18, hillAmp:8,  detAmp:4, surf:SAND,  snowH:999,treeRate:0     },
+    cold:     { baseH:17, mtnAmp:16, hillAmp:6,  detAmp:3, surf:SNOW,  snowH:10, treeRate:0.005 },
+    mountain: { baseH:32, mtnAmp:56, hillAmp:18, detAmp:6, surf:STONE, snowH:48, treeRate:0.009 },
   };
   function getBiome(wx, wz) {
     const temp  = noise2(wx, wz, 0.006, worldSeed ^ 0xbabe1);
