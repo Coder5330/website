@@ -56,7 +56,6 @@
     tiles.push({ el, col, y: -TILE_HEIGHT, hit: false });
   }
 
-
   function onBeat() {
     if (!running) return;
 
@@ -178,20 +177,75 @@
   }
 
   async function saveToSupabase(scoreVal) {
-    if (typeof sb === 'undefined') return;
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) return;
-    const { data } = await sb.from('scores').select('payload')
-      .eq('player_id', session.user.id).eq('game', 'piano').maybeSingle();
-    if (data?.payload?.score >= scoreVal) return;
-    await sb.from('scores').upsert({
-      player_id: session.user.id, game: 'piano',
-      payload: { score: scoreVal }
-    }, { onConflict: 'player_id,game' });
+    if (typeof sb === 'undefined') {
+      console.log('Supabase not initialized');
+      return false;
+    }
+    
+    try {
+      const { data: { session }, error: sessionError } = await sb.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        return false;
+      }
+      
+      if (!session) {
+        console.log('No active session');
+        return false;
+      }
+
+      // Check existing score
+      const { data: existing, error: fetchError } = await sb
+        .from('scores')
+        .select('payload')
+        .eq('player_id', session.user.id)
+        .eq('game', 'piano')
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Fetch error:', fetchError);
+        return false;
+      }
+
+      // Don't save if existing score is better
+      if (existing?.payload?.score >= scoreVal) {
+        console.log('Existing score is better, skipping save');
+        return true;
+      }
+
+      // Upsert new score
+      const { error: upsertError } = await sb
+        .from('scores')
+        .upsert({
+          player_id: session.user.id,
+          game: 'piano',
+          payload: { score: scoreVal }
+        }, { onConflict: 'player_id,game' });
+
+      if (upsertError) {
+        console.error('Upsert error:', upsertError);
+        return false;
+      }
+
+      console.log('Score saved to Supabase successfully');
+      return true;
+
+    } catch (err) {
+      console.error('Unexpected error in saveToSupabase:', err);
+      return false;
+    }
   }
 
-  function saveScore(name, scoreVal) {
-    saveToSupabase(scoreVal);
+  async function saveScore(name, scoreVal) {
+    // Save to Supabase first (if user is logged in)
+    const supabaseSuccess = await saveToSupabase(scoreVal);
+    
+    if (!supabaseSuccess) {
+      console.log('Supabase save failed or skipped, saving to localStorage only');
+    }
+
+    // Always save to localStorage as backup
     const scores = loadScores();
     scores.push({ name, score: scoreVal, date: Date.now() });
     scores.sort((a, b) => b.score - a.score);
@@ -227,6 +281,16 @@
     return div.innerHTML;
   }
 
+  async function checkAuthStatus() {
+    if (typeof sb === 'undefined') return false;
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      return !!session;
+    } catch {
+      return false;
+    }
+  }
+
   // Event wiring
   document.getElementById('startBtn').addEventListener('click', startGame);
   document.getElementById('leaderboardBtn').addEventListener('click', () => {
@@ -239,9 +303,20 @@
     renderLeaderboard();
     show('leaderboard');
   });
-  document.getElementById('saveBtn').addEventListener('click', () => {
+  document.getElementById('saveBtn').addEventListener('click', async () => {
     const name = document.getElementById('nameInput').value.trim() || 'Anon';
-    saveScore(name, score);
+    
+    // Show loading state
+    const saveBtn = document.getElementById('saveBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    
+    await saveScore(name, score);
+    
+    saveBtn.textContent = originalText;
+    saveBtn.disabled = false;
+    
     document.getElementById('nameEntry').classList.add('hidden');
     document.getElementById('postSave').classList.remove('hidden');
   });
@@ -264,6 +339,16 @@
     else if (e.key === '2') hit(1);
     else if (e.key === '3') hit(2);
     else if (e.key === '4') hit(3);
+  });
+
+  // Check auth status on load
+  window.addEventListener('load', async () => {
+    const loggedIn = await checkAuthStatus();
+    if (!loggedIn) {
+      console.log('Not logged in - scores will be saved locally only');
+    } else {
+      console.log('Logged in - scores will sync to leaderboard');
+    }
   });
 
   show('menu');
