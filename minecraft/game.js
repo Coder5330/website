@@ -1,17 +1,20 @@
 (() => {
-  // ── Block IDs (match settings.py) ────────────────────────────────────────
+  // ── Block IDs ────────────────────────────────────────────────────────────
   const AIR=0, SAND=1, GRASS=2, DIRT=3, STONE=4, SNOW=5, LEAVES=6, WOOD=7, WATER=8;
   const BEDROCK = 9;
+  const CRAFTING_TABLE = 10;
   const COAL_ORE=12, IRON_ORE=13, COPPER_ORE=14, GOLD_ORE=15, REDSTONE_ORE=16, DIAMOND_ORE=17;
   const ORES = [COAL_ORE, IRON_ORE, COPPER_ORE, GOLD_ORE, REDSTONE_ORE, DIAMOND_ORE];
-  const ALL_BLOCKS = [SAND, GRASS, DIRT, STONE, SNOW, LEAVES, WOOD];
-  const SOLID = new Set([SAND,GRASS,DIRT,STONE,SNOW,LEAVES,WOOD,BEDROCK,
+  const ATLAS_BLOCKS = [SAND, GRASS, DIRT, STONE, SNOW, LEAVES, WOOD]; // in tex_array_0.png
+  const SOLID = new Set([SAND,GRASS,DIRT,STONE,SNOW,LEAVES,WOOD,BEDROCK,CRAFTING_TABLE,
                          COAL_ORE,IRON_ORE,COPPER_ORE,GOLD_ORE,REDSTONE_ORE,DIAMOND_ORE]);
 
-  // World dims
-  const WX=64, WY=40, WZ=64;
-  const SEA_LEVEL = 9;
+  // ── World dims (chunked, infinite) ───────────────────────────────────────
+  const CHUNK_W = 16;
+  const WY = 64;
+  const SEA_LEVEL = 14;
   const ATLAS_LAYERS = 8;
+  const RENDER_DIST = 2; // generate this many chunks beyond player chunk
 
   // ── Tool items ───────────────────────────────────────────────────────────
   const ITEM_WOOD_PICK=101, ITEM_STONE_PICK=102, ITEM_IRON_PICK=103, ITEM_DIAMOND_PICK=104;
@@ -37,54 +40,47 @@
     [ITEM_DIAMOND_SWORD]:{ kind:'sword',   tier:4, name:'Diamond Sword',   img:'assets/diamondsword.png' },
   };
 
-  // ── Crafting items (non-tool, non-block) ─────────────────────────────────
   const ITEM_PLANK = 106, ITEM_STICK = 107;
   const ITEMS = {
-    [ITEM_PLANK]: { name: 'Plank', color: '#c8954a' },
-    [ITEM_STICK]: { name: 'Stick', color: '#8b6914' },
+    [ITEM_PLANK]: { name: 'Plank' },
+    [ITEM_STICK]: { name: 'Stick' },
   };
-  // ── Recipes (each ingredient: ['block'|'tool'|'item', id, count]) ────────
+
+  // ── Recipes ──────────────────────────────────────────────────────────────
+  // shape: array of strings (rows), 1-3 rows × 1-3 chars; ' ' = empty
+  // key: char -> ['block'|'item'|'tool', id]
+  // out: ['block'|'item'|'tool', id, count]
+  // shapeless: array of [kind, id, count?] — order doesn't matter, no shape constraint
   const RECIPES = [
-    { name:'4 Planks',          out:['item', ITEM_PLANK, 4],
-      in:[['block', WOOD, 1]] },
-    { name:'4 Sticks',          out:['item', ITEM_STICK, 4],
-      in:[['item', ITEM_PLANK, 2]] },
-    { name:'Wood Pickaxe',      out:['tool', ITEM_WOOD_PICK, 1],
-      in:[['item', ITEM_PLANK, 3], ['item', ITEM_STICK, 2]] },
-    { name:'Wood Axe',          out:['tool', ITEM_WOOD_AXE, 1],
-      in:[['item', ITEM_PLANK, 3], ['item', ITEM_STICK, 2]] },
-    { name:'Wood Shovel',       out:['tool', ITEM_WOOD_SHOVEL, 1],
-      in:[['item', ITEM_PLANK, 1], ['item', ITEM_STICK, 2]] },
-    { name:'Wood Sword',        out:['tool', ITEM_WOOD_SWORD, 1],
-      in:[['item', ITEM_PLANK, 2], ['item', ITEM_STICK, 1]] },
-    { name:'Stone Pickaxe',     out:['tool', ITEM_STONE_PICK, 1],
-      in:[['block', STONE, 3], ['item', ITEM_STICK, 2]] },
-    { name:'Stone Axe',         out:['tool', ITEM_STONE_AXE, 1],
-      in:[['block', STONE, 3], ['item', ITEM_STICK, 2]] },
-    { name:'Stone Shovel',      out:['tool', ITEM_STONE_SHOVEL, 1],
-      in:[['block', STONE, 1], ['item', ITEM_STICK, 2]] },
-    { name:'Stone Sword',       out:['tool', ITEM_STONE_SWORD, 1],
-      in:[['block', STONE, 2], ['item', ITEM_STICK, 1]] },
-    { name:'Iron Pickaxe',      out:['tool', ITEM_IRON_PICK, 1],
-      in:[['block', IRON_ORE, 3], ['item', ITEM_STICK, 2]] },
-    { name:'Iron Axe',          out:['tool', ITEM_IRON_AXE, 1],
-      in:[['block', IRON_ORE, 3], ['item', ITEM_STICK, 2]] },
-    { name:'Iron Shovel',       out:['tool', ITEM_IRON_SHOVEL, 1],
-      in:[['block', IRON_ORE, 1], ['item', ITEM_STICK, 2]] },
-    { name:'Iron Sword',        out:['tool', ITEM_IRON_SWORD, 1],
-      in:[['block', IRON_ORE, 2], ['item', ITEM_STICK, 1]] },
-    { name:'Diamond Pickaxe',   out:['tool', ITEM_DIAMOND_PICK, 1],
-      in:[['block', DIAMOND_ORE, 3], ['item', ITEM_STICK, 2]] },
-    { name:'Diamond Axe',       out:['tool', ITEM_DIAMOND_AXE, 1],
-      in:[['block', DIAMOND_ORE, 3], ['item', ITEM_STICK, 2]] },
-    { name:'Diamond Sword',     out:['tool', ITEM_DIAMOND_SWORD, 1],
-      in:[['block', DIAMOND_ORE, 2], ['item', ITEM_STICK, 1]] },
+    { shapeless:[['block', WOOD, 1]],                 out:['item',  ITEM_PLANK, 4] },
+    { shapeless:[['item',  ITEM_PLANK, 2]],           out:['item',  ITEM_STICK, 4] },
+    { shape:['pp','pp'],
+      key:{ p:['item', ITEM_PLANK] },
+      out:['block', CRAFTING_TABLE, 1] },
+    // Pickaxes (3-wide top row)
+    { shape:['ppp',' s ',' s '], key:{ p:['item',ITEM_PLANK],  s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_PICK, 1] },
+    { shape:['ppp',' s ',' s '], key:{ p:['block',STONE],      s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_PICK, 1] },
+    { shape:['ppp',' s ',' s '], key:{ p:['block',IRON_ORE],   s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_PICK, 1] },
+    { shape:['ppp',' s ',' s '], key:{ p:['block',DIAMOND_ORE],s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_PICK, 1] },
+    // Axes
+    { shape:['pp','ps',' s'],    key:{ p:['item',ITEM_PLANK],  s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_AXE, 1] },
+    { shape:['pp','ps',' s'],    key:{ p:['block',STONE],      s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_AXE, 1] },
+    { shape:['pp','ps',' s'],    key:{ p:['block',IRON_ORE],   s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_AXE, 1] },
+    { shape:['pp','ps',' s'],    key:{ p:['block',DIAMOND_ORE],s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_AXE, 1] },
+    // Shovels
+    { shape:['p','s','s'],       key:{ p:['item',ITEM_PLANK],  s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_SHOVEL, 1] },
+    { shape:['p','s','s'],       key:{ p:['block',STONE],      s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_SHOVEL, 1] },
+    { shape:['p','s','s'],       key:{ p:['block',IRON_ORE],   s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_SHOVEL, 1] },
+    // Swords
+    { shape:['p','p','s'],       key:{ p:['item',ITEM_PLANK],  s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_SWORD, 1] },
+    { shape:['p','p','s'],       key:{ p:['block',STONE],      s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_SWORD, 1] },
+    { shape:['p','p','s'],       key:{ p:['block',IRON_ORE],   s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_SWORD, 1] },
+    { shape:['p','p','s'],       key:{ p:['block',DIAMOND_ORE],s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_SWORD, 1] },
   ];
 
-  // What tool each block prefers + minimum tier required to drop
   const BLOCK_TOOL = {
     [SAND]:'shovel', [DIRT]:'shovel', [GRASS]:'shovel', [SNOW]:'shovel',
-    [WOOD]:'axe',    [LEAVES]:'sword',
+    [WOOD]:'axe',    [LEAVES]:'sword', [CRAFTING_TABLE]:'axe',
     [STONE]:'pickaxe', [COAL_ORE]:'pickaxe', [IRON_ORE]:'pickaxe',
     [COPPER_ORE]:'pickaxe', [GOLD_ORE]:'pickaxe',
     [DIAMOND_ORE]:'pickaxe', [REDSTONE_ORE]:'pickaxe',
@@ -94,16 +90,13 @@
     [IRON_ORE]:2, [COPPER_ORE]:2,
     [GOLD_ORE]:3, [DIAMOND_ORE]:3, [REDSTONE_ORE]:3,
   };
-
-  // Block hardness (Minecraft wiki / voxel_handler.py)
   const BLOCK_HARDNESS = {
     [SAND]: 0.5, [GRASS]: 0.6, [DIRT]: 0.5, [SNOW]: 0.1,
-    [WOOD]: 2.0, [LEAVES]: 0.2, [STONE]: 1.5,
+    [WOOD]: 2.0, [LEAVES]: 0.2, [STONE]: 1.5, [CRAFTING_TABLE]: 2.5,
     [COAL_ORE]: 3.0, [IRON_ORE]: 3.0, [COPPER_ORE]: 3.0,
     [GOLD_ORE]: 3.0, [REDSTONE_ORE]: 3.0, [DIAMOND_ORE]: 3.0,
     [BEDROCK]: Infinity,
   };
-  // Mining speed multiplier per tool tier (1=wood, 2=stone, 3=iron, 4=diamond)
   const TIER_SPEED = [1, 2, 4, 6, 8];
 
   function getSelectedTool() {
@@ -116,50 +109,49 @@
     const t = itemId != null ? TOOLS[itemId] : null;
     return !!(t && t.kind === BLOCK_TOOL[block] && t.tier >= minTier);
   }
-  // Official Minecraft Java Edition mining-time formula
   function getMineTime(block, itemId) {
     const hardness = BLOCK_HARDNESS[block];
     if (hardness === undefined || hardness === Infinity) return Infinity;
-
     const t = itemId != null ? TOOLS[itemId] : null;
     let speedMultiplier = 1;
     if (t && t.kind === BLOCK_TOOL[block]) speedMultiplier = TIER_SPEED[t.tier];
-
-    if (inWater())          speedMultiplier *= 0.2; // submerged, no aqua affinity
+    if (inWater())          speedMultiplier *= 0.2;
     if (!player.grounded)   speedMultiplier /= 5;
-
     let damage = speedMultiplier / hardness;
     damage /= canHarvest(block, itemId) ? 30 : 100;
-
-    if (damage >= 1) return 0; // instant break
-    const ticks = Math.ceil(1 / damage);
-    return ticks / 20;
+    if (damage >= 1) return 0;
+    return Math.ceil(1 / damage) / 20;
   }
 
   // ── Physics ──────────────────────────────────────────────────────────────
-  const WALK = 4.5;
-  const SPRINT = 6.5;
-  const JUMP_VEL = 8.2;
-  const GRAVITY = -28;
-  const MAX_FALL = 60;
+  const WALK = 4.5, SPRINT = 6.5, JUMP_VEL = 8.2, GRAVITY = -28, MAX_FALL = 60;
   const PW = 0.3, PH = 1.8, EYE = 1.6, REACH = 5.5;
 
   // ── State ────────────────────────────────────────────────────────────────
-  let world = null;
   let myId='', myName='Player', myColor=0xe74c3c;
   let others = {};
-  let channel=null, isHost=false, roomCode='', worldTimeout=null;
-  let hotbarSlot=0, running=false, worldDirty=false;
+  let channel=null, isHost=false, roomCode='', worldSeed=1;
+  let hotbarSlot=0, running=false;
   const player = { pos: new THREE.Vector3(0,0,0), vy:0, grounded:false, yaw:0, pitch:0 };
   const inputKeys = { fwd:false, back:false, left:false, right:false, jump:false, sprint:false };
 
-  // Inventory: 36 total slots; first 9 are the hotbar.
-  // Each slot: null | {kind:'block', block, count} | {kind:'tool', id} | {kind:'item', id, count}
   const HOTBAR_SIZE = 9;
   const INV_SIZE = 36;
   const inventory = Array(INV_SIZE).fill(null);
-  const blockThumbs = {}; // populated by atlas + ore loaders
-  const itemThumbs = {};  // populated for non-block items (planks, sticks)
+  const blockThumbs = {};
+  const itemThumbs = {};
+
+  // Chunks: Map<"cx,cz", Uint8Array(16*WY*16)>
+  const chunks = new Map();
+  // Per-chunk meshes: Map<"cx,cz", { meshes: {id: InstancedMesh}, dirty: bool }>
+  const chunkMeshes = new Map();
+  // Edits diff so newly-generated chunks pick them up & joiners receive them
+  // Map<"x,y,z", value>
+  const edits = new Map();
+  let lastChunkX = null, lastChunkZ = null;
+
+  const ckey = (cx,cz) => cx + ',' + cz;
+  const ek   = (x,y,z) => x + ',' + y + ',' + z;
 
   // ── Three.js ─────────────────────────────────────────────────────────────
   const canvas = document.getElementById('mcCanvas');
@@ -168,9 +160,9 @@
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x88c5ff);
-  scene.fog = new THREE.Fog(0x88c5ff, 50, 130);
+  scene.fog = new THREE.Fog(0x88c5ff, 60, 160);
 
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 400);
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 500);
   scene.add(camera);
 
   scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x6b4f31, 0.85));
@@ -200,16 +192,20 @@
   waterTex.minFilter = THREE.NearestFilter;
   waterTex.colorSpace = THREE.SRGBColorSpace;
 
+  const ctTex = new THREE.TextureLoader().load('assets/crafting_table.png');
+  ctTex.magFilter = THREE.NearestFilter;
+  ctTex.minFilter = THREE.NearestFilter;
+  ctTex.colorSpace = THREE.SRGBColorSpace;
+
   function makeBlockGeo(id) {
     const g = new THREE.BoxGeometry(1, 1, 1);
     const uvs = g.attributes.uv.array;
     const vMax = (ATLAS_LAYERS - id) / ATLAS_LAYERS;
     const vMin = vMax - 1 / ATLAS_LAYERS;
-    // BoxGeometry face order: +X, -X, +Y, -Y, +Z, -Z. Atlas tile order: BOTTOM | SIDE | TOP.
     const uRanges = [
-      [1/3, 2/3], [1/3, 2/3], // +X side, -X side
-      [2/3, 1  ], [0,   1/3], // +Y top (right tile), -Y bottom (left tile)
-      [1/3, 2/3], [1/3, 2/3], // +Z side, -Z side
+      [1/3, 2/3], [1/3, 2/3],
+      [2/3, 1  ], [0,   1/3],
+      [1/3, 2/3], [1/3, 2/3],
     ];
     for (let face = 0; face < 6; face++) {
       const [uMin, uMax] = uRanges[face];
@@ -224,23 +220,24 @@
   }
 
   const blockGeos = {};
-  for (const id of ALL_BLOCKS) blockGeos[id] = makeBlockGeo(id);
+  for (const id of ATLAS_BLOCKS) blockGeos[id] = makeBlockGeo(id);
   blockGeos[BEDROCK] = blockGeos[STONE];
   blockGeos[WATER]   = new THREE.BoxGeometry(1, 1, 1);
+  blockGeos[CRAFTING_TABLE] = new THREE.BoxGeometry(1, 1, 1);
+  for (const id of ORES) blockGeos[id] = new THREE.BoxGeometry(1, 1, 1);
 
   const blockMaterial = new THREE.MeshLambertMaterial({ map: atlasTex });
   const waterMaterial = new THREE.MeshLambertMaterial({
     map: waterTex, color: 0x99ccff, transparent: true, opacity: 0.78, depthWrite: false,
   });
+  const craftingTableMat = new THREE.MeshLambertMaterial({ map: ctTex });
 
-  // ── Ore textures from tex_array_1.png (4×2 grid of 64×64 tiles) ──────────
-  // Tile order in file (row-major): coal, iron, gold, diamond, lapis, redstone, emerald, copper
+  // Ore textures
   const oreMaterials = {};
   const oreTileIndex = {
     [COAL_ORE]: 0, [IRON_ORE]: 1, [GOLD_ORE]: 2, [DIAMOND_ORE]: 3,
     [REDSTONE_ORE]: 5, [COPPER_ORE]: 7,
   };
-  for (const id of ORES) blockGeos[id] = new THREE.BoxGeometry(1, 1, 1);
   const oreImg = new Image();
   oreImg.onload = () => {
     const tileW = oreImg.width / 4;
@@ -259,7 +256,6 @@
       tex.minFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.SRGBColorSpace;
       oreMaterials[id] = new THREE.MeshLambertMaterial({ map: tex });
-      // Hotbar thumbnail
       const tc = document.createElement('canvas');
       tc.width = tc.height = 32;
       const tcx = tc.getContext('2d');
@@ -267,18 +263,28 @@
       tcx.drawImage(oreImg, col*tileW, row*tileH, tileW, tileH, 0, 0, 32, 32);
       blockThumbs[id] = tc.toDataURL();
     }
-    if (running) { worldDirty = true; updateHotbarUI(); }
+    if (running) { markAllChunksDirty(); updateHotbarUI(); }
   };
   oreImg.src = 'assets/tex_array_1.png';
 
-  // ── Crack textures ───────────────────────────────────────────────────────
+  // Crafting-table thumbnail
+  const ctImg = new Image();
+  ctImg.onload = () => {
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const cx = c.getContext('2d');
+    cx.imageSmoothingEnabled = false;
+    cx.drawImage(ctImg, 0, 0, ctImg.width, ctImg.height, 0, 0, 32, 32);
+    blockThumbs[CRAFTING_TABLE] = c.toDataURL();
+    updateHotbarUI();
+  };
+  ctImg.src = 'assets/crafting_table.png';
+
+  // Crack textures
   const crackTextures = [];
   for (let i = 0; i < 10; i++) {
     const t = new THREE.TextureLoader().load(`assets/crack_${i}.png`);
-    t.magFilter = THREE.NearestFilter;
-    t.minFilter = THREE.NearestFilter;
-    t.generateMipmaps = false;
-    crackTextures.push(t);
+    t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+    t.generateMipmaps = false; crackTextures.push(t);
   }
   const crackMat = new THREE.MeshBasicMaterial({
     transparent: true, opacity: 0.95, depthWrite: false, polygonOffset: true,
@@ -288,14 +294,12 @@
   crackMesh.visible = false; crackMesh.frustumCulled = false;
   scene.add(crackMesh);
 
-  // ── Block selection wireframe (BLACK, opaque) ────────────────────────────
   const selectGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.005, 1.005, 1.005));
   const selectMat = new THREE.LineBasicMaterial({ color: 0x000000 });
   const selectMesh = new THREE.LineSegments(selectGeo, selectMat);
   selectMesh.visible = false; selectMesh.frustumCulled = false;
   scene.add(selectMesh);
 
-  // ── First-person hand (swings while mining) ──────────────────────────────
   const hand = new THREE.Mesh(
     new THREE.BoxGeometry(0.18, 0.55, 0.18),
     new THREE.MeshLambertMaterial({ color: 0xf5c896 })
@@ -305,16 +309,37 @@
   camera.add(hand);
   let armSwing = 0;
 
-  // ── World helpers ────────────────────────────────────────────────────────
-  const idx = (x,y,z) => (y * WZ + z) * WX + x;
-  const getB = (x,y,z) => {
-    if (x<0||x>=WX||z<0||z>=WZ||y<0) return BEDROCK;
-    if (y>=WY) return AIR;
-    return world[idx(x,y,z)];
-  };
-  const setB = (x,y,z,v) => {
-    if (x>=0&&x<WX&&y>=0&&y<WY&&z>=0&&z<WZ) world[idx(x,y,z)]=v;
-  };
+  // ── Chunk world helpers ──────────────────────────────────────────────────
+  const chunkLocal = (n) => ((n % CHUNK_W) + CHUNK_W) % CHUNK_W;
+
+  function getB(x, y, z) {
+    if (y < 0) return BEDROCK;
+    if (y >= WY) return AIR;
+    const cx = Math.floor(x / CHUNK_W), cz = Math.floor(z / CHUNK_W);
+    const ch = chunks.get(ckey(cx, cz));
+    if (!ch) return AIR;
+    const lx = chunkLocal(x), lz = chunkLocal(z);
+    return ch[(y * CHUNK_W + lz) * CHUNK_W + lx];
+  }
+  function setBLocalOnly(x, y, z, v) {
+    if (y < 0 || y >= WY) return false;
+    const cx = Math.floor(x / CHUNK_W), cz = Math.floor(z / CHUNK_W);
+    const ch = chunks.get(ckey(cx, cz));
+    if (!ch) return false;
+    const lx = chunkLocal(x), lz = chunkLocal(z);
+    ch[(y * CHUNK_W + lz) * CHUNK_W + lx] = v;
+    markChunkDirty(cx, cz);
+    if (lx === 0)            markChunkDirty(cx-1, cz);
+    if (lx === CHUNK_W - 1)  markChunkDirty(cx+1, cz);
+    if (lz === 0)            markChunkDirty(cx, cz-1);
+    if (lz === CHUNK_W - 1)  markChunkDirty(cx, cz+1);
+    return true;
+  }
+  // Authoritative set: applies edit and records it for joiners + future chunks
+  function setB(x, y, z, v) {
+    edits.set(ek(x, y, z), v);
+    setBLocalOnly(x, y, z, v);
+  }
   const isSolidAt = (x,y,z) => SOLID.has(getB(x,y,z));
 
   function isFaceVisible(id, x, y, z) {
@@ -325,34 +350,172 @@
         || ok(getB(x,y,z-1)) || ok(getB(x,y,z+1));
   }
 
-  // ── Mesh building ────────────────────────────────────────────────────────
-  const meshes = {};
-  function buildMeshes() {
-    for (const id of Object.keys(meshes)) {
-      scene.remove(meshes[id]);
-      meshes[id].dispose();
-      delete meshes[id];
+  // ── Deterministic noise (seeded) ─────────────────────────────────────────
+  function hash2(a, b, salt) {
+    let n = ((a|0) * 374761393) ^ ((b|0) * 668265263) ^ (salt|0) * 2147483647;
+    n = (n ^ (n>>13)) * 1274126177 | 0;
+    return ((n ^ (n>>16)) >>> 0) / 0xffffffff;
+  }
+  function noise2(x, z, freq, salt) {
+    const xi = Math.floor(x*freq), zi = Math.floor(z*freq);
+    const xf = x*freq - xi, zf = z*freq - zi;
+    const u = xf*xf*(3-2*xf), v = zf*zf*(3-2*zf);
+    return ((hash2(xi,zi,salt)*(1-u) + hash2(xi+1,zi,salt)*u) * (1-v)
+          + (hash2(xi,zi+1,salt)*(1-u) + hash2(xi+1,zi+1,salt)*u) * v);
+  }
+  function heightAt(x, z) {
+    // Mountains: large slow features
+    let h = 18;
+    h += (noise2(x, z, 0.012, worldSeed)        - 0.35) * 56; // mountain ridges, can dip negative for valleys
+    h += noise2(x, z, 0.045, worldSeed^0x9e37)  * 14;          // hills
+    h += noise2(x, z, 0.18,  worldSeed^0x12af)  * 4;           // detail
+    return Math.max(2, Math.min(WY - 4, Math.floor(h)));
+  }
+
+  // ── Generate one chunk ───────────────────────────────────────────────────
+  function generateChunk(cx, cz) {
+    const buf = new Uint8Array(CHUNK_W * WY * CHUNK_W);
+    const set = (lx, y, lz, v) => { buf[(y * CHUNK_W + lz) * CHUNK_W + lx] = v; };
+
+    const heights = new Int32Array(CHUNK_W * CHUNK_W);
+    for (let lz = 0; lz < CHUNK_W; lz++) {
+      for (let lx = 0; lx < CHUNK_W; lx++) {
+        const wx = cx * CHUNK_W + lx, wz = cz * CHUNK_W + lz;
+        const h = heightAt(wx, wz);
+        heights[lz * CHUNK_W + lx] = h;
+        for (let y = 0; y < h; y++) {
+          if (y === 0) set(lx, y, lz, BEDROCK);
+          else if (y < h - 4) set(lx, y, lz, STONE);
+          else set(lx, y, lz, DIRT);
+        }
+        const surf = h - 1;
+        if (h >= WY - 12)            set(lx, surf, lz, SNOW);
+        else if (surf <= SEA_LEVEL + 1) set(lx, surf, lz, SAND);
+        else                            set(lx, surf, lz, GRASS);
+        // Water fill ONLY where ground sank below sea level (oases / valleys)
+        for (let y = h; y <= SEA_LEVEL; y++) set(lx, y, lz, WATER);
+      }
     }
+
+    // Trees (deterministic per chunk via salted RNG)
+    let s = (cx * 73856093) ^ (cz * 19349663) ^ worldSeed;
+    const rng = () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) / 0xffffffff); };
+    for (let lz = 2; lz < CHUNK_W - 2; lz++) {
+      for (let lx = 2; lx < CHUNK_W - 2; lx++) {
+        const h = heights[lz * CHUNK_W + lx];
+        const surf = h - 1;
+        if (buf[(surf * CHUNK_W + lz) * CHUNK_W + lx] !== GRASS) continue;
+        if (rng() > 0.022) continue;
+        const th = 4 + Math.floor(rng() * 2);
+        for (let dy = 0; dy < th; dy++) if (h + dy < WY) set(lx, h + dy, lz, WOOD);
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -2; dx <= 2; dx++) for (let dzz = -2; dzz <= 2; dzz++) {
+          const yy = h + th - 1 + dy;
+          const lxx = lx + dx, lzz = lz + dzz;
+          if (lxx < 0 || lxx >= CHUNK_W || lzz < 0 || lzz >= CHUNK_W) continue;
+          if (yy < 0 || yy >= WY) continue;
+          if (Math.abs(dx) + Math.abs(dzz) + Math.abs(dy) > 4) continue;
+          if (buf[(yy * CHUNK_W + lzz) * CHUNK_W + lxx] === AIR) set(lxx, yy, lzz, LEAVES);
+        }
+        if (h + th < WY) set(lx, h + th, lz, LEAVES);
+      }
+    }
+
+    // Ore veins
+    const oreSpec = [
+      { id: COAL_ORE,     minY: 4,  maxY: 36, count: 8, vein: 5 },
+      { id: COPPER_ORE,   minY: 4,  maxY: 32, count: 5, vein: 5 },
+      { id: IRON_ORE,     minY: 3,  maxY: 28, count: 6, vein: 4 },
+      { id: GOLD_ORE,     minY: 2,  maxY: 16, count: 3, vein: 4 },
+      { id: REDSTONE_ORE, minY: 2,  maxY: 14, count: 3, vein: 5 },
+      { id: DIAMOND_ORE,  minY: 2,  maxY: 10, count: 2, vein: 3 },
+    ];
+    for (const spec of oreSpec) {
+      for (let i = 0; i < spec.count; i++) {
+        let lx = Math.floor(rng() * CHUNK_W);
+        let y  = spec.minY + Math.floor(rng() * (spec.maxY - spec.minY + 1));
+        let lz = Math.floor(rng() * CHUNK_W);
+        for (let v = 0; v < spec.vein; v++) {
+          if (lx >= 0 && lx < CHUNK_W && lz >= 0 && lz < CHUNK_W && y > 0 && y < WY) {
+            if (buf[(y * CHUNK_W + lz) * CHUNK_W + lx] === STONE)
+              set(lx, y, lz, spec.id);
+          }
+          const dir = Math.floor(rng() * 6);
+          if      (dir === 0) lx--;
+          else if (dir === 1) lx++;
+          else if (dir === 2) y--;
+          else if (dir === 3) y++;
+          else if (dir === 4) lz--;
+          else                lz++;
+        }
+      }
+    }
+
+    // Apply any edits within this chunk
+    for (const [k, v] of edits) {
+      const [ex, ey, ez] = k.split(',').map(Number);
+      const ecx = Math.floor(ex / CHUNK_W), ecz = Math.floor(ez / CHUNK_W);
+      if (ecx !== cx || ecz !== cz) continue;
+      if (ey < 0 || ey >= WY) continue;
+      const lx = chunkLocal(ex), lz = chunkLocal(ez);
+      buf[(ey * CHUNK_W + lz) * CHUNK_W + lx] = v;
+    }
+
+    return buf;
+  }
+
+  // ── Per-chunk meshing ────────────────────────────────────────────────────
+  function markChunkDirty(cx, cz) {
+    const k = ckey(cx, cz);
+    const m = chunkMeshes.get(k);
+    if (m) m.dirty = true;
+  }
+  function markAllChunksDirty() {
+    for (const m of chunkMeshes.values()) m.dirty = true;
+  }
+  function disposeChunkMeshes(cx, cz) {
+    const k = ckey(cx, cz);
+    const m = chunkMeshes.get(k);
+    if (!m) return;
+    for (const mesh of Object.values(m.meshes)) {
+      scene.remove(mesh);
+      mesh.dispose();
+    }
+    chunkMeshes.delete(k);
+  }
+  function buildChunkMesh(cx, cz) {
+    const k = ckey(cx, cz);
+    const ch = chunks.get(k);
+    if (!ch) return;
+    let entry = chunkMeshes.get(k);
+    if (entry) {
+      for (const mesh of Object.values(entry.meshes)) { scene.remove(mesh); mesh.dispose(); }
+    }
+    entry = { meshes: {}, dirty: false };
+    chunkMeshes.set(k, entry);
+
     const counts = {};
-    for (let y=0; y<WY; y++) for (let z=0; z<WZ; z++) for (let x=0; x<WX; x++) {
-      const b = getB(x,y,z);
+    const x0 = cx * CHUNK_W, z0 = cz * CHUNK_W;
+    for (let y = 0; y < WY; y++) for (let lz = 0; lz < CHUNK_W; lz++) for (let lx = 0; lx < CHUNK_W; lx++) {
+      const b = ch[(y * CHUNK_W + lz) * CHUNK_W + lx];
       if (b === AIR) continue;
-      if (!isFaceVisible(b, x, y, z)) continue;
-      counts[b] = (counts[b]||0) + 1;
+      if (!isFaceVisible(b, x0 + lx, y, z0 + lz)) continue;
+      counts[b] = (counts[b] || 0) + 1;
     }
+
     const dummy = new THREE.Object3D();
     for (const idStr of Object.keys(counts)) {
       const id = +idStr;
       const geo = blockGeos[id] || blockGeos[STONE];
-      const mat = (id === WATER) ? waterMaterial
-                : (oreMaterials[id]) ? oreMaterials[id]
-                : blockMaterial;
+      const mat = (id === WATER)          ? waterMaterial
+                : (id === CRAFTING_TABLE) ? craftingTableMat
+                : (oreMaterials[id])      ? oreMaterials[id]
+                                          : blockMaterial;
       const mesh = new THREE.InstancedMesh(geo, mat, counts[id]);
       let i = 0;
-      for (let y=0; y<WY; y++) for (let z=0; z<WZ; z++) for (let x=0; x<WX; x++) {
-        if (getB(x,y,z) !== id) continue;
-        if (!isFaceVisible(id, x, y, z)) continue;
-        dummy.position.set(x + 0.5, y + 0.5, z + 0.5);
+      for (let y = 0; y < WY; y++) for (let lz = 0; lz < CHUNK_W; lz++) for (let lx = 0; lx < CHUNK_W; lx++) {
+        if (ch[(y * CHUNK_W + lz) * CHUNK_W + lx] !== id) continue;
+        if (!isFaceVisible(id, x0 + lx, y, z0 + lz)) continue;
+        dummy.position.set(x0 + lx + 0.5, y + 0.5, z0 + lz + 0.5);
         dummy.updateMatrix();
         mesh.setMatrixAt(i++, dummy.matrix);
       }
@@ -360,141 +523,68 @@
       mesh.frustumCulled = false;
       if (id === WATER) mesh.renderOrder = 2;
       scene.add(mesh);
-      meshes[id] = mesh;
+      entry.meshes[id] = mesh;
     }
   }
 
-  // ── World gen with terrain + water ───────────────────────────────────────
-  function noise2(x, z, freq) {
-    const xi = Math.floor(x*freq), zi = Math.floor(z*freq);
-    const xf = x*freq - xi, zf = z*freq - zi;
-    const h = (a,b) => {
-      let n = (a|0)*374761393 + (b|0)*668265263;
-      n = (n ^ (n>>13)) * 1274126177 | 0;
-      return ((n ^ (n>>16)) >>> 0) / 0xffffffff;
-    };
-    const u = xf*xf*(3-2*xf), v = zf*zf*(3-2*zf);
-    return ((h(xi,zi)*(1-u) + h(xi+1,zi)*u) * (1-v)
-          + (h(xi,zi+1)*(1-u) + h(xi+1,zi+1)*u) * v);
-  }
+  function updateChunks() {
+    const pcx = Math.floor(player.pos.x / CHUNK_W);
+    const pcz = Math.floor(player.pos.z / CHUNK_W);
+    if (pcx === lastChunkX && pcz === lastChunkZ) return;
+    lastChunkX = pcx; lastChunkZ = pcz;
 
-  function generateWorld() {
-    world = new Uint8Array(WX * WY * WZ);
-    const heights = [];
-    for (let z=0; z<WZ; z++) {
-      heights[z] = [];
-      for (let x=0; x<WX; x++) {
-        let h = 4;
-        h += noise2(x, z, 0.035) * 16;
-        h += noise2(x, z, 0.085) * 6;
-        h += noise2(x, z, 0.21)  * 2.5;
-        h = Math.max(2, Math.min(WY - 5, Math.floor(h)));
-        heights[z][x] = h;
-        for (let y=0; y<h; y++) {
-          if (y === 0) setB(x,y,z, BEDROCK);
-          else if (y < h - 4) setB(x,y,z, STONE);
-          else setB(x,y,z, DIRT);
-        }
-        const surf = h - 1;
-        if (h >= WY - 9)        setB(x, surf, z, SNOW);
-        else if (surf <= SEA_LEVEL) setB(x, surf, z, SAND);
-        else                       setB(x, surf, z, GRASS);
-      }
-    }
-    // Trees only on grass above water
-    let s = Math.random()*999;
-    const rng = () => { s = (s*9301+49297)%233280; return s/233280; };
-    for (let z=3; z<WZ-3; z++) for (let x=3; x<WX-3; x++) {
-      if (getB(x, heights[z][x] - 1, z) !== GRASS) continue;
-      if (rng() > 0.022) continue;
-      const h = heights[z][x];
-      const th = 4 + Math.floor(rng()*2);
-      for (let dy=0; dy<th; dy++) setB(x, h+dy, z, WOOD);
-      for (let dy=-1; dy<=1; dy++) for (let dx=-2; dx<=2; dx++) for (let dz=-2; dz<=2; dz++) {
-        const yy = h + th - 1 + dy;
-        if (Math.abs(dx)+Math.abs(dz)+Math.abs(dy) > 4) continue;
-        if (getB(x+dx, yy, z+dz) === AIR) setB(x+dx, yy, z+dz, LEAVES);
-      }
-      setB(x, h+th, z, LEAVES);
-    }
-    // Fill all air ≤ SEA_LEVEL with water
-    for (let z=0; z<WZ; z++) for (let x=0; x<WX; x++) {
-      for (let y=0; y<=SEA_LEVEL; y++) if (getB(x,y,z) === AIR) setB(x,y,z, WATER);
-    }
-    // Scatter ore veins inside stone
-    const oreSpec = [
-      { id: COAL_ORE,     minY: 4,  maxY: 32, count: 90, vein: 5 },
-      { id: COPPER_ORE,   minY: 4,  maxY: 28, count: 50, vein: 5 },
-      { id: IRON_ORE,     minY: 3,  maxY: 24, count: 65, vein: 4 },
-      { id: GOLD_ORE,     minY: 2,  maxY: 14, count: 22, vein: 4 },
-      { id: REDSTONE_ORE, minY: 2,  maxY: 12, count: 24, vein: 5 },
-      { id: DIAMOND_ORE,  minY: 2,  maxY:  9, count: 14, vein: 3 },
-    ];
-    for (const spec of oreSpec) {
-      for (let i = 0; i < spec.count; i++) {
-        let cx = Math.floor(rng()*WX);
-        let cy = spec.minY + Math.floor(rng() * (spec.maxY - spec.minY + 1));
-        let cz = Math.floor(rng()*WZ);
-        for (let v = 0; v < spec.vein; v++) {
-          if (getB(cx,cy,cz) === STONE) setB(cx,cy,cz, spec.id);
-          const dir = Math.floor(rng()*6);
-          if      (dir===0 && cx>0)    cx--;
-          else if (dir===1 && cx<WX-1) cx++;
-          else if (dir===2 && cy>1)    cy--;
-          else if (dir===3 && cy<WY-1) cy++;
-          else if (dir===4 && cz>0)    cz--;
-          else if (dir===5 && cz<WZ-1) cz++;
+    // Generate any missing chunks within range
+    for (let dz = -RENDER_DIST; dz <= RENDER_DIST; dz++) {
+      for (let dx = -RENDER_DIST; dx <= RENDER_DIST; dx++) {
+        const cx = pcx + dx, cz = pcz + dz;
+        const k = ckey(cx, cz);
+        if (!chunks.has(k)) {
+          chunks.set(k, generateChunk(cx, cz));
+          chunkMeshes.set(k, { meshes:{}, dirty:true });
+          // edges of newly-created chunk affect neighbour faces
+          markChunkDirty(cx-1, cz); markChunkDirty(cx+1, cz);
+          markChunkDirty(cx, cz-1); markChunkDirty(cx, cz+1);
         }
       }
     }
+    // Unload chunks far away
+    for (const k of [...chunks.keys()]) {
+      const [cx, cz] = k.split(',').map(Number);
+      if (Math.abs(cx - pcx) > RENDER_DIST + 1 || Math.abs(cz - pcz) > RENDER_DIST + 1) {
+        disposeChunkMeshes(cx, cz);
+        chunks.delete(k);
+      }
+    }
   }
 
+  function processDirtyChunks(maxPerFrame = 2) {
+    let n = 0;
+    for (const [k, entry] of chunkMeshes) {
+      if (!entry.dirty) continue;
+      const [cx, cz] = k.split(',').map(Number);
+      buildChunkMesh(cx, cz);
+      if (++n >= maxPerFrame) return;
+    }
+  }
+
+  // ── Spawn search ─────────────────────────────────────────────────────────
   function findSpawn() {
-    const cx = Math.floor(WX/2), cz = Math.floor(WZ/2);
-    for (let r = 0; r < WX/2; r++) {
-      for (let dz=-r; dz<=r; dz++) for (let dx=-r; dx<=r; dx++) {
-        const x = cx+dx, z = cz+dz;
-        if (x<0||x>=WX||z<0||z>=WZ) continue;
-        for (let y = WY-3; y > SEA_LEVEL; y--) {
-          if (isSolidAt(x,y,z) && !SOLID.has(getB(x,y+1,z)) && !SOLID.has(getB(x,y+2,z))
-              && getB(x,y+1,z) !== WATER && getB(x,y+2,z) !== WATER)
-            return new THREE.Vector3(x+0.5, y+1, z+0.5);
-        }
-      }
-    }
-    return new THREE.Vector3(WX/2, WY/2, WZ/2);
-  }
-
-  // ── Water flow (simple flood-fill) ───────────────────────────────────────
-  // Only the host runs this (then re-broadcasts changed cells). Guests just
-  // receive block events. Run after the local player breaks/places a block
-  // adjacent to water or below sea level.
-  function settleWater() {
-    if (!world) return [];
-    const changes = [];
-    for (let iter = 0; iter < 12; iter++) {
-      let changed = false;
-      for (let y=0; y<=SEA_LEVEL+1; y++) {
-        for (let z=0; z<WZ; z++) {
-          for (let x=0; x<WX; x++) {
-            if (getB(x,y,z) !== AIR) continue;
-            let flow = (getB(x, y+1, z) === WATER);
-            if (!flow && y <= SEA_LEVEL) {
-              flow = (getB(x-1,y,z)===WATER) || (getB(x+1,y,z)===WATER)
-                  || (getB(x,y,z-1)===WATER) || (getB(x,y,z+1)===WATER);
-            }
-            if (flow) {
-              setB(x,y,z, WATER);
-              changes.push([x,y,z]);
-              changed = true;
-            }
+    // Search outward from origin for a non-water grass/dirt surface
+    for (let r = 0; r < CHUNK_W * (RENDER_DIST + 1); r++) {
+      for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+        const x = dx, z = dz;
+        const cx = Math.floor(x / CHUNK_W), cz = Math.floor(z / CHUNK_W);
+        if (!chunks.has(ckey(cx, cz))) continue;
+        for (let y = WY - 3; y > 0; y--) {
+          if (isSolidAt(x, y, z) && getB(x, y+1, z) === AIR && getB(x, y+2, z) === AIR
+              && getB(x, y, z) !== WATER) {
+            return new THREE.Vector3(x + 0.5, y + 1, z + 0.5);
           }
         }
       }
-      if (!changed) break;
     }
-    if (changes.length) worldDirty = true;
-    return changes;
+    return new THREE.Vector3(0.5, WY/2, 0.5);
   }
 
   // ── Collision ────────────────────────────────────────────────────────────
@@ -516,7 +606,6 @@
     return getB(Math.floor(player.pos.x), Math.floor(player.pos.y + 0.5), Math.floor(player.pos.z)) === WATER;
   }
 
-  // ── Tick ────────────────────────────────────────────────────────────────
   function tick(dt) {
     const f = (inputKeys.fwd?1:0)  - (inputKeys.back?1:0);
     const r = (inputKeys.right?1:0) - (inputKeys.left?1:0);
@@ -533,8 +622,6 @@
     if (inWaterNow) speed *= 0.6;
     const vx = dxn * speed, vz = dzn * speed;
 
-    // Auto step-up: if blocked horizontally but a 1-block ledge is climbable
-    // (always when in water — needed to get out — and otherwise when grounded)
     let wasGrounded = isGrounded(player.pos.x, player.pos.y, player.pos.z);
     const newX = player.pos.x + vx * dt;
     if (!collidesAt(newX, player.pos.y, player.pos.z)) player.pos.x = newX;
@@ -552,12 +639,9 @@
     wasGrounded = isGrounded(player.pos.x, player.pos.y, player.pos.z);
 
     if (inputKeys.jump && wasGrounded) {
-      player.vy = JUMP_VEL;
-      player.grounded = false;
+      player.vy = JUMP_VEL; player.grounded = false;
     } else if (inputKeys.jump && inWaterNow) {
-      // Sustained swim-up while space is held
-      player.vy = Math.max(player.vy, 4.0);
-      player.grounded = false;
+      player.vy = Math.max(player.vy, 4.0); player.grounded = false;
     } else if (wasGrounded && player.vy <= 0) {
       player.vy = 0; player.grounded = true;
       const snapY = Math.round(player.pos.y);
@@ -589,7 +673,6 @@
     camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
   }
 
-  // ── Voxel raycast ────────────────────────────────────────────────────────
   function raycastBlock() {
     const o = camera.position.clone();
     const d = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).normalize();
@@ -649,13 +732,7 @@
       const bx = mining.x, by = mining.y, bz = mining.z, blk = mining.block;
       setB(bx, by, bz, AIR);
       bcast('block', { x: bx, y: by, z: bz, v: AIR });
-      worldDirty = true;
-      // Only drop if the tool was sufficient to harvest
       if (canHarvest(blk, mining.tool)) spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk);
-      if (isHost) {
-        const changes = settleWater();
-        for (const [cx, cy, cz] of changes) bcast('block', { x:cx, y:cy, z:cz, v:WATER });
-      }
       mining = null;
       crackMesh.visible = false;
     }
@@ -663,10 +740,14 @@
 
   function placeBlock() {
     const hit = raycastBlock(); if (!hit) return;
+    // Right-click on crafting table → open 3x3 crafting
+    if (getB(hit.x, hit.y, hit.z) === CRAFTING_TABLE) {
+      openInventoryWithCrafting(3); return;
+    }
     const slot = inventory[hotbarSlot];
     if (!slot || slot.kind !== 'block' || slot.count <= 0) return;
     const px = hit.x + hit.normal[0], py = hit.y + hit.normal[1], pz = hit.z + hit.normal[2];
-    if (px<0||px>=WX||py<0||py>=WY||pz<0||pz>=WZ) return;
+    if (py < 0 || py >= WY) return;
     const cur = getB(px, py, pz);
     if (cur !== AIR && cur !== WATER) return;
     const cx = px+0.5, cy = py+0.5, cz = pz+0.5;
@@ -679,7 +760,6 @@
     if (slot.count <= 0) inventory[hotbarSlot] = null;
     updateHotbarUI();
     bcast('block', { x:px, y:py, z:pz, v:blk });
-    worldDirty = true;
   }
 
   // ── Dropped items ────────────────────────────────────────────────────────
@@ -690,8 +770,9 @@
     const geo = baseGeo.clone();
     geo.scale(0.32, 0.32, 0.32);
     const mat = (blockId === WATER)         ? waterMaterial
+              : (blockId === CRAFTING_TABLE)? craftingTableMat
               : (oreMaterials[blockId])     ? oreMaterials[blockId]
-              : blockMaterial;
+                                            : blockMaterial;
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(x, y, z);
     scene.add(mesh);
@@ -705,33 +786,23 @@
   function updateDrops(dt) {
     for (let i = drops.length - 1; i >= 0; i--) {
       const d = drops[i];
-      d.age += dt;
-      d.spin += dt * 1.8;
-
+      d.age += dt; d.spin += dt * 1.8;
       d.vel.y = Math.max(d.vel.y + GRAVITY * dt, -18);
       const newY = d.pos.y + d.vel.y * dt;
       if (isSolidAt(Math.floor(d.pos.x), Math.floor(newY - 0.16), Math.floor(d.pos.z))) {
         d.pos.y = Math.ceil(newY - 0.16) + 0.16;
-        d.vel.y = 0;
-        d.vel.x *= 0.55;
-        d.vel.z *= 0.55;
-      } else {
-        d.pos.y = newY;
-      }
+        d.vel.y = 0; d.vel.x *= 0.55; d.vel.z *= 0.55;
+      } else d.pos.y = newY;
       const newX = d.pos.x + d.vel.x * dt;
-      if (!isSolidAt(Math.floor(newX), Math.floor(d.pos.y), Math.floor(d.pos.z)))
-        d.pos.x = newX;
+      if (!isSolidAt(Math.floor(newX), Math.floor(d.pos.y), Math.floor(d.pos.z))) d.pos.x = newX;
       else d.vel.x *= -0.3;
       const newZ = d.pos.z + d.vel.z * dt;
-      if (!isSolidAt(Math.floor(d.pos.x), Math.floor(d.pos.y), Math.floor(newZ)))
-        d.pos.z = newZ;
+      if (!isSolidAt(Math.floor(d.pos.x), Math.floor(d.pos.y), Math.floor(newZ))) d.pos.z = newZ;
       else d.vel.z *= -0.3;
       d.vel.x *= 0.985; d.vel.z *= 0.985;
-
       const bob = Math.sin(d.age * 2.5) * 0.07;
       d.mesh.position.set(d.pos.x, d.pos.y + bob, d.pos.z);
       d.mesh.rotation.y = d.spin;
-
       if (d.age > 0.4) {
         const dx = d.pos.x - player.pos.x;
         const dz = d.pos.z - player.pos.z;
@@ -743,7 +814,6 @@
           }
         }
       }
-      // Despawn after 5min
       if (d.age > 300) {
         scene.remove(d.mesh); d.mesh.geometry.dispose();
         drops.splice(i, 1);
@@ -751,7 +821,6 @@
     }
   }
 
-  // ── Hand swing animation ─────────────────────────────────────────────────
   function updateHand(dt) {
     if (mouseDownLeft && mining) {
       armSwing += dt * 6;
@@ -768,21 +837,19 @@
     }
   }
 
-  // ── Inventory + crafting helpers ─────────────────────────────────────────
+  // ── Inventory helpers ────────────────────────────────────────────────────
+  function itemKindMatches(slot, kind, id) {
+    if (!slot || slot.kind !== kind) return false;
+    return (kind === 'block') ? slot.block === id : slot.id === id;
+  }
   function addStackable(kind, id, count) {
-    // Try to stack with existing
     for (let i = 0; i < INV_SIZE; i++) {
       const s = inventory[i];
-      if (s && s.kind === kind && (s.block === id || s.id === id)) {
-        s.count += count; updateInventoryUI(); return true;
-      }
+      if (s && itemKindMatches(s, kind, id)) { s.count += count; updateInventoryUI(); return true; }
     }
-    // Otherwise empty slot
     for (let i = 0; i < INV_SIZE; i++) {
       if (!inventory[i]) {
-        inventory[i] = (kind === 'block')
-          ? { kind, block: id, count }
-          : { kind, id, count };
+        inventory[i] = (kind === 'block') ? { kind, block: id, count } : { kind, id, count };
         updateInventoryUI(); return true;
       }
     }
@@ -797,49 +864,94 @@
     return false;
   }
 
-  function countOf(kind, id) {
-    let n = 0;
-    for (const s of inventory) {
-      if (!s || s.kind !== kind) continue;
-      if (kind === 'block' && s.block === id) n += s.count;
-      else if (kind !== 'block' && s.id === id) n += (s.count || 1);
+  // ── Crafting grid + recipe matching ──────────────────────────────────────
+  // craftGrid is 3x3; only top-left 2x2 is used in inventory mode
+  let craftGrid = Array(9).fill(null);
+  let craftSize = 2; // 2 or 3
+  let craftResult = null;
+  let cursorItem = null; // dragging in inventory
+  let invOpen = false;
+
+  function gridGet(r, c) { return craftGrid[r * 3 + c]; }
+  function gridSet(r, c, v) { craftGrid[r * 3 + c] = v; }
+
+  function ingredientMatches(slot, kind, id) {
+    if (!slot) return false;
+    if (slot.kind !== kind) return false;
+    return (kind === 'block') ? slot.block === id : slot.id === id;
+  }
+
+  function matchRecipe() {
+    // Find tight bounding box of non-null cells within craftSize×craftSize
+    let r0 = craftSize, r1 = -1, c0 = craftSize, c1 = -1;
+    for (let r = 0; r < craftSize; r++) for (let c = 0; c < craftSize; c++) {
+      if (gridGet(r, c)) {
+        if (r < r0) r0 = r; if (r > r1) r1 = r;
+        if (c < c0) c0 = c; if (c > c1) c1 = c;
+      }
     }
-    return n;
+    if (r1 < 0) return null;
+    const rows = r1 - r0 + 1, cols = c1 - c0 + 1;
+
+    // Try each recipe
+    outer: for (const recipe of RECIPES) {
+      if (recipe.shapeless) {
+        // Count items in entire grid, compare to ingredient list
+        const need = recipe.shapeless.map(([k, id, n]) => ({ k, id, n: n||1, have: 0 }));
+        let totalCells = 0;
+        for (let r = 0; r < craftSize; r++) for (let c = 0; c < craftSize; c++) {
+          const s = gridGet(r, c); if (!s) continue;
+          totalCells++;
+          let matched = false;
+          for (const ing of need) {
+            if (ingredientMatches(s, ing.k, ing.id)) { ing.have += (s.count || 1); matched = true; break; }
+          }
+          if (!matched) continue outer;
+        }
+        if (totalCells === 0) continue;
+        for (const ing of need) if (ing.have < ing.n) continue outer;
+        return recipe;
+      }
+      // Shaped
+      const pat = recipe.shape;
+      if (pat.length !== rows) continue;
+      if (pat[0].length !== cols) continue;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const ch = pat[r][c];
+        const slot = gridGet(r0 + r, c0 + c);
+        if (ch === ' ') {
+          if (slot) continue outer;
+        } else {
+          const def = recipe.key[ch];
+          if (!def || !slot) continue outer;
+          if (!ingredientMatches(slot, def[0], def[1])) continue outer;
+        }
+      }
+      // Check no extra items outside bounding box (already enforced by trim, since trim is min/max of non-null)
+      return recipe;
+    }
+    return null;
   }
-  function consume(kind, id, count) {
-    let need = count;
-    for (let i = 0; i < INV_SIZE && need > 0; i++) {
-      const s = inventory[i]; if (!s || s.kind !== kind) continue;
-      const matches = (kind === 'block') ? s.block === id : s.id === id;
-      if (!matches) continue;
-      const take = Math.min(s.count || 1, need);
-      s.count = (s.count || 1) - take;
-      need -= take;
-      if (s.count <= 0) inventory[i] = null;
+  function makeOutputItem(recipe) {
+    const [k, id, n] = recipe.out;
+    if (k === 'block') return { kind:'block', block:id, count:n };
+    if (k === 'item')  return { kind:'item',  id, count:n };
+    return { kind:'tool', id };
+  }
+  function consumeGridOnce() {
+    // Consume one of each non-empty slot
+    for (let r = 0; r < craftSize; r++) for (let c = 0; c < craftSize; c++) {
+      const s = gridGet(r, c); if (!s) continue;
+      if (s.kind === 'tool') gridSet(r, c, null);
+      else {
+        s.count = (s.count || 1) - 1;
+        if (s.count <= 0) gridSet(r, c, null);
+      }
     }
   }
-  function canCraft(recipe) {
-    return recipe.in.every(([k, id, n]) => countOf(k, id) >= n);
-  }
-  function craft(recipe) {
-    if (!canCraft(recipe)) return false;
-    for (const [k, id, n] of recipe.in) consume(k, id, n);
-    const [ok, oid, on] = recipe.out;
-    if (ok === 'block')      addStackable('block', oid, on);
-    else if (ok === 'item')  addStackable('item',  oid, on);
-    else if (ok === 'tool')  addTool(oid);
-    updateInventoryUI();
-    if (invOpen) renderInventoryPanel();
-    return true;
-  }
-  function giveStartingTools() {
-    inventory[0] = { kind:'tool', id: ITEM_WOOD_PICK };
-    inventory[1] = { kind:'tool', id: ITEM_STONE_PICK };
-    inventory[2] = { kind:'tool', id: ITEM_IRON_PICK };
-    inventory[3] = { kind:'tool', id: ITEM_DIAMOND_PICK };
-    inventory[4] = { kind:'tool', id: ITEM_IRON_AXE };
-    inventory[5] = { kind:'tool', id: ITEM_IRON_SHOVEL };
-    inventory[6] = { kind:'tool', id: ITEM_DIAMOND_SWORD };
+  function recomputeCraftResult() {
+    const r = matchRecipe();
+    craftResult = r ? makeOutputItem(r) : null;
   }
 
   // ── Other players ────────────────────────────────────────────────────────
@@ -874,57 +986,42 @@
     }
   }
 
-  // ── Multiplayer ──────────────────────────────────────────────────────────
+  // ── Multiplayer (deterministic terrain via roomCode seed) ────────────────
   function bcast(event, payload) { if (channel) channel.send({ type:'broadcast', event, payload }); }
 
-  function rleEnc(arr) {
-    const out = []; let i = 0;
-    while (i < arr.length) {
-      let n = 1;
-      while (i+n < arr.length && arr[i+n] === arr[i] && n < 255) n++;
-      out.push(n, arr[i]); i += n;
+  function sendEdits() {
+    if (edits.size === 0) { bcast('edits', { e: [] }); return; }
+    const arr = [];
+    for (const [k, v] of edits) {
+      const [x,y,z] = k.split(',').map(Number);
+      arr.push([x, y, z, v]);
     }
-    return new Uint8Array(out);
+    bcast('edits', { e: arr });
   }
-  function rleDec(rle) {
-    const out = [];
-    for (let i=0; i<rle.length; i+=2) for (let j=0; j<rle[i]; j++) out.push(rle[i+1]);
-    return new Uint8Array(out);
-  }
-  const b64Enc = b => { let s=''; for (const x of b) s += String.fromCharCode(x); return btoa(s); };
-  const b64Dec = s => { const b = atob(s); const o = new Uint8Array(b.length); for (let i=0;i<b.length;i++) o[i]=b.charCodeAt(i); return o; };
-
-  function sendWorld() {
-    if (!world) return;
-    bcast('world', { d: b64Enc(rleEnc(world)) });
+  function applyEditsBatch(arr) {
+    for (const [x, y, z, v] of arr) {
+      edits.set(ek(x,y,z), v);
+      setBLocalOnly(x, y, z, v);
+    }
   }
 
   function connectRoom(code) {
     if (channel) sb.removeChannel(channel);
     channel = sb.channel('mc3d:'+code);
-
     channel.on('presence', { event:'sync' }, () => {
       const all = Object.values(channel.presenceState()).flat();
       document.getElementById('onlineBadge').textContent = '👤 ' + all.length + ' online';
-      if (isHost && world) sendWorld();
+      if (isHost) sendEdits();
     });
     channel.on('presence', { event:'leave' }, ({ leftPresences }) => {
       const arr = Array.isArray(leftPresences) ? leftPresences : Object.values(leftPresences).flat();
       arr.forEach(p => { if (p?.userId && p.userId !== myId) removeOther(p.userId); });
     });
-    channel.on('broadcast', { event:'req_world' }, () => { if (isHost && world) sendWorld(); });
-    channel.on('broadcast', { event:'world' }, ({ payload }) => {
-      if (world) return;
-      if (worldTimeout) { clearTimeout(worldTimeout); worldTimeout = null; }
-      const decoded = rleDec(b64Dec(payload.d));
-      const buf = new Uint8Array(WX*WY*WZ);
-      buf.set(decoded.subarray(0, Math.min(decoded.length, buf.length)));
-      world = buf;
-      beginPlaying();
-    });
+    channel.on('broadcast', { event:'req_edits' }, () => { if (isHost) sendEdits(); });
+    channel.on('broadcast', { event:'edits' }, ({ payload }) => applyEditsBatch(payload.e || []));
     channel.on('broadcast', { event:'block' }, ({ payload }) => {
-      setB(payload.x, payload.y, payload.z, payload.v);
-      worldDirty = true;
+      edits.set(ek(payload.x, payload.y, payload.z), payload.v);
+      setBLocalOnly(payload.x, payload.y, payload.z, payload.v);
     });
     channel.on('broadcast', { event:'move' }, ({ payload }) => {
       if (payload.id === myId) return;
@@ -933,14 +1030,12 @@
       o.mesh.position.set(o.x, o.y, o.z);
       o.mesh.rotation.y = -o.yaw;
     });
-
     channel.subscribe(async status => {
       if (status !== 'SUBSCRIBED') return;
       await channel.track({ userId: myId, displayName: myName });
       if (!isHost) {
-        bcast('req_world', {});
-        setTimeout(() => bcast('req_world', {}), 1500);
-        setTimeout(() => bcast('req_world', {}), 4000);
+        bcast('req_edits', {});
+        setTimeout(() => bcast('req_edits', {}), 1500);
       }
     });
   }
@@ -950,7 +1045,7 @@
   canvas.addEventListener('click', () => { if (running && !invOpen) canvas.requestPointerLock(); });
   document.addEventListener('pointerlockchange', () => {
     pointerLocked = document.pointerLockElement === canvas;
-    document.getElementById('lockHint').style.display = (running && !pointerLocked) ? 'block' : 'none';
+    document.getElementById('lockHint').style.display = (running && !pointerLocked && !invOpen) ? 'block' : 'none';
     if (!pointerLocked) {
       mouseDownLeft = false; mining = null;
       crackMesh.visible = false; selectMesh.visible = false;
@@ -974,7 +1069,7 @@
       mouseDownLeft = false; mining = null; crackMesh.visible = false;
     }
   });
-  document.addEventListener('contextmenu', e => { if (pointerLocked) e.preventDefault(); });
+  document.addEventListener('contextmenu', e => { if (pointerLocked || invOpen) e.preventDefault(); });
 
   document.addEventListener('keydown', e => {
     if (!running) return;
@@ -1005,22 +1100,20 @@
     updateHotbarUI();
   }, { passive: false });
 
-  // ── Hotbar UI (counts; sample texture from atlas) ────────────────────────
-  function makeThumbs(image) {
+  // ── Hotbar UI ────────────────────────────────────────────────────────────
+  function makeAtlasThumbs(image) {
     const layerH = image.height / ATLAS_LAYERS;
     const tileW  = image.width / 3;
     for (const id of [SAND, GRASS, DIRT, STONE, SNOW, LEAVES, WOOD]) {
-      const c = document.createElement('canvas');
-      c.width = c.height = 32;
-      const cx = c.getContext('2d');
-      cx.imageSmoothingEnabled = false;
+      const c = document.createElement('canvas'); c.width = c.height = 32;
+      const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
       cx.drawImage(image, tileW, id * layerH, tileW, layerH, 0, 0, 32, 32);
       blockThumbs[id] = c.toDataURL();
     }
     buildHotbarUI();
   }
   const atlasImg = new Image();
-  atlasImg.onload = () => makeThumbs(atlasImg);
+  atlasImg.onload = () => makeAtlasThumbs(atlasImg);
   atlasImg.src = 'assets/tex_array_0.png';
 
   function slotImage(item) {
@@ -1048,6 +1141,7 @@
   }
   itemThumbs[ITEM_PLANK] = makePlankThumb();
   itemThumbs[ITEM_STICK] = makeStickThumb();
+
   function buildHotbarUI() {
     const el = document.getElementById('hotbar');
     el.innerHTML = '';
@@ -1084,9 +1178,9 @@
   }
   function updateInventoryUI() { updateHotbarUI(); if (invOpen) renderInventoryPanel(); }
 
-  // ── Inventory overlay (E to toggle) ──────────────────────────────────────
-  let invOpen = false;
+  // ── Inventory + crafting overlay ─────────────────────────────────────────
   let invPanelEl = null;
+  let cursorEl = null;
 
   function ensureInvPanel() {
     if (invPanelEl) return;
@@ -1094,88 +1188,229 @@
     invPanelEl.id = 'invPanel';
     invPanelEl.innerHTML = `
       <div class="inv-frame">
-        <h2>Inventory</h2>
+        <h2 id="invTitle">Inventory</h2>
+        <div class="craft-area">
+          <div class="craft-grid" id="craftGridEl"></div>
+          <div class="craft-arrow">→</div>
+          <div class="craft-result" id="craftResultEl"></div>
+        </div>
+        <h3>Inventory</h3>
         <div class="inv-grid" id="invGrid"></div>
         <h3>Hotbar</h3>
         <div class="inv-grid hotbar" id="invHotbar"></div>
-        <h3>Crafting</h3>
-        <div class="recipes" id="invRecipes"></div>
-        <p class="inv-hint">Press <b>E</b> or <b>Esc</b> to close. Click recipe to craft.</p>
+        <p class="inv-hint">
+          <b>E</b>/<b>Esc</b> close · Click pick up · Right-click split · Right-click crafting table for 3×3 grid
+        </p>
       </div>`;
     invPanelEl.style.display = 'none';
     document.getElementById('mcApp').appendChild(invPanelEl);
+
+    cursorEl = document.createElement('div');
+    cursorEl.id = 'invCursor';
+    document.body.appendChild(cursorEl);
+
+    document.addEventListener('mousemove', e => {
+      if (!invOpen) return;
+      cursorEl.style.left = (e.clientX + 8) + 'px';
+      cursorEl.style.top  = (e.clientY + 8) + 'px';
+    });
   }
 
-  function slotHTML(item) {
-    if (!item) return '<div class="iv-slot"></div>';
+  function slotHTML(item, extraClass='') {
+    if (!item) return `<div class="iv-slot ${extraClass}"></div>`;
     const src = slotImage(item);
     const bg = src ? `style="background-image:url(${src})"` : '';
     const cnt = (item.kind !== 'tool' && (item.count || 0) > 1) ? `<span class="cnt">${item.count}</span>` : '';
-    const title = item.kind === 'block' ? '' : (item.kind === 'tool' ? TOOLS[item.id]?.name : ITEMS[item.id]?.name) || '';
-    return `<div class="iv-slot filled" title="${title}"><div class="iv-swatch" ${bg}></div>${cnt}</div>`;
+    const title = item.kind === 'block' ? '' :
+                  item.kind === 'tool' ? (TOOLS[item.id]?.name || '') :
+                                          (ITEMS[item.id]?.name || '');
+    return `<div class="iv-slot filled ${extraClass}" title="${title}"><div class="iv-swatch" ${bg}></div>${cnt}</div>`;
+  }
+
+  // Click logic: left-click swap/pick up; right-click split (take half) or place 1
+  function clickInvSlot(getItem, setItem, e) {
+    e.preventDefault();
+    const right = (e.button === 2);
+    const cur = cursorItem;
+    const here = getItem();
+    if (right) {
+      if (cur && !here) {
+        // Place 1
+        const placed = (cur.kind === 'tool')
+          ? { kind:'tool', id:cur.id }
+          : (cur.kind === 'block')
+            ? { kind:'block', block:cur.block, count:1 }
+            : { kind:'item',  id:cur.id, count:1 };
+        setItem(placed);
+        if (cur.kind !== 'tool') {
+          cur.count -= 1;
+          if (cur.count <= 0) cursorItem = null;
+        } else cursorItem = null;
+      } else if (cur && here && itemKindMatches(here, cur.kind, cur.kind==='block'?cur.block:cur.id) && cur.kind !== 'tool') {
+        // Add 1 to existing
+        here.count += 1;
+        cur.count -= 1;
+        if (cur.count <= 0) cursorItem = null;
+        setItem(here);
+      } else if (!cur && here && here.kind !== 'tool') {
+        // Take half
+        const half = Math.ceil((here.count || 1) / 2);
+        cursorItem = (here.kind === 'block')
+          ? { kind:'block', block:here.block, count:half }
+          : { kind:'item',  id:here.id, count:half };
+        here.count -= half;
+        if (here.count <= 0) setItem(null); else setItem(here);
+      } else if (!cur && here && here.kind === 'tool') {
+        // Tools just pick up whole
+        cursorItem = here; setItem(null);
+      }
+    } else {
+      // Left click: stack-merge or swap
+      if (cur && here && itemKindMatches(here, cur.kind, cur.kind==='block'?cur.block:cur.id) && cur.kind !== 'tool') {
+        here.count += cur.count;
+        cursorItem = null;
+        setItem(here);
+      } else {
+        setItem(cur);
+        cursorItem = here;
+      }
+    }
+    updateInventoryUI();
   }
 
   function renderInventoryPanel() {
     if (!invPanelEl) ensureInvPanel();
-    const grid = invPanelEl.querySelector('#invGrid');
-    const hbar = invPanelEl.querySelector('#invHotbar');
-    let g = '';
-    for (let i = HOTBAR_SIZE; i < INV_SIZE; i++) g += slotHTML(inventory[i]);
-    grid.innerHTML = g;
-    let h = '';
-    for (let i = 0; i < HOTBAR_SIZE; i++) h += slotHTML(inventory[i]);
-    hbar.innerHTML = h;
-    const recipesEl = invPanelEl.querySelector('#invRecipes');
-    recipesEl.innerHTML = '';
-    for (const r of RECIPES) {
-      const ok = canCraft(r);
-      const ingHTML = r.in.map(([k, id, n]) => {
-        const fake = (k === 'block') ? { kind:'block', block:id, count:n }
-                  : (k === 'tool')  ? { kind:'tool',  id }
-                                    : { kind:'item',  id, count:n };
-        const src = slotImage(fake);
-        return `<span class="ing"><span class="ing-img" style="background-image:url(${src||''})"></span>×${n}</span>`;
-      }).join('');
-      const [ok2, oid, on] = r.out;
-      const outFake = (ok2 === 'block') ? { kind:'block', block:oid, count:on }
-                    : (ok2 === 'tool')  ? { kind:'tool',  id:oid }
-                                        : { kind:'item',  id:oid, count:on };
-      const outImg = slotImage(outFake) || '';
+    document.getElementById('invTitle').textContent = (craftSize === 3) ? 'Crafting Table' : 'Inventory';
+
+    // Crafting grid
+    const cg = invPanelEl.querySelector('#craftGridEl');
+    cg.style.gridTemplateColumns = `repeat(${craftSize}, 38px)`;
+    cg.innerHTML = '';
+    for (let r = 0; r < craftSize; r++) for (let c = 0; c < craftSize; c++) {
+      const idx = r * 3 + c;
       const div = document.createElement('div');
-      div.className = 'recipe' + (ok ? ' can' : '');
-      div.innerHTML = `
-        <div class="r-out"><div class="ing-img" style="background-image:url(${outImg})"></div>×${on}</div>
-        <div class="r-arrow">←</div>
-        <div class="r-ings">${ingHTML}</div>
-        <div class="r-name">${r.name}</div>`;
-      div.addEventListener('click', () => { if (canCraft(r)) craft(r); });
-      recipesEl.appendChild(div);
+      div.innerHTML = slotHTML(craftGrid[idx], 'craft-cell');
+      const cell = div.firstElementChild;
+      cell.addEventListener('mousedown', e => {
+        clickInvSlot(
+          () => craftGrid[idx],
+          (v) => { craftGrid[idx] = v; recomputeCraftResult(); },
+          e
+        );
+      });
+      cell.addEventListener('contextmenu', e => e.preventDefault());
+      cg.appendChild(cell);
+    }
+    // Result
+    const cr = invPanelEl.querySelector('#craftResultEl');
+    cr.innerHTML = slotHTML(craftResult, craftResult ? 'craft-out can' : 'craft-out');
+    const resCell = cr.firstElementChild;
+    resCell.addEventListener('mousedown', e => {
+      e.preventDefault();
+      if (!craftResult) return;
+      const out = makeOutputItem(matchRecipe());
+      if (!out) return;
+      if (cursorItem) {
+        // Only add if same type
+        if (cursorItem.kind === out.kind &&
+            (cursorItem.kind==='tool' ? cursorItem.id===out.id :
+             (cursorItem.kind==='block' ? cursorItem.block===out.block : cursorItem.id===out.id))
+            && cursorItem.kind !== 'tool') {
+          cursorItem.count += out.count;
+        } else return;
+      } else cursorItem = out;
+      consumeGridOnce();
+      recomputeCraftResult();
+      updateInventoryUI();
+    });
+
+    // Inventory grid (slots 9..35)
+    const grid = invPanelEl.querySelector('#invGrid');
+    grid.innerHTML = '';
+    for (let i = HOTBAR_SIZE; i < INV_SIZE; i++) {
+      const div = document.createElement('div'); div.innerHTML = slotHTML(inventory[i]);
+      const cell = div.firstElementChild;
+      cell.addEventListener('mousedown', e => {
+        clickInvSlot(() => inventory[i], (v) => { inventory[i] = v; }, e);
+      });
+      cell.addEventListener('contextmenu', e => e.preventDefault());
+      grid.appendChild(cell);
+    }
+    // Hotbar
+    const hbar = invPanelEl.querySelector('#invHotbar');
+    hbar.innerHTML = '';
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
+      const div = document.createElement('div'); div.innerHTML = slotHTML(inventory[i]);
+      const cell = div.firstElementChild;
+      cell.addEventListener('mousedown', e => {
+        clickInvSlot(() => inventory[i], (v) => { inventory[i] = v; }, e);
+      });
+      cell.addEventListener('contextmenu', e => e.preventDefault());
+      hbar.appendChild(cell);
+    }
+    // Cursor preview
+    cursorEl.innerHTML = cursorItem ? slotHTML(cursorItem, 'cursor-slot') : '';
+    cursorEl.style.display = cursorItem ? 'block' : 'none';
+  }
+
+  function dropCursorBackToInventory() {
+    if (!cursorItem) return;
+    if (cursorItem.kind === 'tool') addTool(cursorItem.id);
+    else addStackable(cursorItem.kind, cursorItem.kind==='block'?cursorItem.block:cursorItem.id, cursorItem.count);
+    cursorItem = null;
+  }
+  function returnCraftGridToInventory() {
+    for (let i = 0; i < 9; i++) {
+      const s = craftGrid[i]; if (!s) continue;
+      if (s.kind === 'tool') addTool(s.id);
+      else addStackable(s.kind, s.kind==='block'?s.block:s.id, s.count);
+      craftGrid[i] = null;
     }
   }
 
+  function openInventoryWithCrafting(size) {
+    craftSize = size;
+    if (!invOpen) toggleInventory();
+    else { recomputeCraftResult(); renderInventoryPanel(); }
+  }
   function toggleInventory() {
     invOpen = !invOpen;
     ensureInvPanel();
     if (invOpen) {
       if (document.pointerLockElement) document.exitPointerLock();
-      // Stop motion keys held when opening
       inputKeys.fwd = inputKeys.back = inputKeys.left = inputKeys.right = false;
       inputKeys.jump = inputKeys.sprint = false;
       mouseDownLeft = false; mining = null;
       crackMesh.visible = false;
+      recomputeCraftResult();
       invPanelEl.style.display = 'flex';
       renderInventoryPanel();
     } else {
+      // Return cursor + crafting-grid items to inventory so they're not lost
+      dropCursorBackToInventory();
+      returnCraftGridToInventory();
+      recomputeCraftResult();
+      craftSize = 2;
+      cursorEl.style.display = 'none';
       invPanelEl.style.display = 'none';
     }
   }
 
   // ── Boot ────────────────────────────────────────────────────────────────
   function beginPlaying() {
+    // Force-load chunks around origin so spawn search has terrain
+    lastChunkX = lastChunkZ = null;
+    player.pos.set(0.5, WY, 0.5);
+    updateChunks();
     const sp = findSpawn();
     player.pos.copy(sp); player.vy = 0; player.yaw = 0; player.pitch = 0;
-    giveStartingTools();
-    buildMeshes();
+    lastChunkX = lastChunkZ = null;
+    updateChunks();
+    // Build initial chunk meshes immediately
+    for (const [k, entry] of chunkMeshes) if (entry.dirty) {
+      const [cx, cz] = k.split(',').map(Number);
+      buildChunkMesh(cx, cz);
+    }
     running = true;
     document.getElementById('lobbyPanel').style.display = 'none';
     document.getElementById('waitPanel').style.display = 'none';
@@ -1183,7 +1418,7 @@
     document.getElementById('hotbar').style.display = 'flex';
     document.getElementById('hudInfo').style.display = 'block';
     document.getElementById('roomBadge').textContent = 'Room: ' + roomCode;
-    if (atlasImg.complete && Object.keys(blockThumbs).length === 0) makeThumbs(atlasImg);
+    if (atlasImg.complete && Object.keys(blockThumbs).length === 0) makeAtlasThumbs(atlasImg);
     else buildHotbarUI();
     resize();
     last = performance.now();
@@ -1195,16 +1430,15 @@
     if (!running) return;
     const dt = Math.min((now - last) / 1000, 0.05); last = now;
     tick(dt);
+    updateChunks();
+    processDirtyChunks(2);
     updateMining(dt);
     updateDrops(dt);
     updateHand(dt);
 
-    // Animate water texture (flowing effect)
     waterAnimT += dt * 0.18;
     waterTex.offset.y = -waterAnimT;
     waterTex.offset.x = waterAnimT * 0.5;
-
-    if (worldDirty) { buildMeshes(); worldDirty = false; }
 
     moveBcastTimer += dt;
     if (moveBcastTimer > 0.05) {
@@ -1237,25 +1471,30 @@
     for (let i=0;i<4;i++) c += p[Math.floor(Math.random()*p.length)];
     return c;
   }
+  function seedFromCode(c) {
+    let s = 0; for (const ch of c) s = ((s<<5) - s + ch.charCodeAt(0)) | 0;
+    return Math.abs(s) || 1;
+  }
 
   document.getElementById('createBtn').addEventListener('click', async () => {
     if (!await getMyUser()) return;
     roomCode = genCode(); isHost = true;
+    worldSeed = seedFromCode(roomCode);
     document.getElementById('lobbyPanel').style.display = 'none';
-    resize(); generateWorld(); connectRoom(roomCode); beginPlaying();
+    resize(); connectRoom(roomCode); beginPlaying();
   });
   document.getElementById('joinBtn').addEventListener('click', async () => {
     const code = document.getElementById('codeInput').value.trim().toUpperCase();
     if (code.length !== 4) { alert('Enter a 4-letter room code.'); return; }
     if (!await getMyUser()) return;
     roomCode = code; isHost = false;
+    worldSeed = seedFromCode(roomCode);
     document.getElementById('lobbyPanel').style.display = 'none';
     document.getElementById('waitCode').textContent = code;
     document.getElementById('waitPanel').style.display = 'flex';
     resize(); connectRoom(roomCode);
-    worldTimeout = setTimeout(() => {
-      document.getElementById('waitMsg').textContent = 'Room not found. Check the code and try again.';
-    }, 12000);
+    // Joiners can begin immediately — terrain is deterministic from the seed.
+    setTimeout(() => beginPlaying(), 400);
   });
   document.getElementById('codeInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('joinBtn').click();
