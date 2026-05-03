@@ -100,6 +100,12 @@
     [BEDROCK]: Infinity,
   };
   const TIER_SPEED = [1, 2, 4, 6, 8];
+  const TOOL_MAX_DUR = {
+    [ITEM_WOOD_PICK]:60,    [ITEM_STONE_PICK]:132,   [ITEM_IRON_PICK]:251,   [ITEM_DIAMOND_PICK]:1562,
+    [ITEM_WOOD_AXE]:60,     [ITEM_STONE_AXE]:132,    [ITEM_IRON_AXE]:251,    [ITEM_DIAMOND_AXE]:1562,
+    [ITEM_WOOD_SHOVEL]:60,  [ITEM_STONE_SHOVEL]:132,  [ITEM_IRON_SHOVEL]:251,
+    [ITEM_WOOD_SWORD]:60,   [ITEM_STONE_SWORD]:132,   [ITEM_IRON_SWORD]:251,  [ITEM_DIAMOND_SWORD]:1562,
+  };
 
   function getSelectedTool() {
     const slot = inventory[hotbarSlot];
@@ -117,7 +123,7 @@
     const t = itemId != null ? TOOLS[itemId] : null;
     let speedMultiplier = 1;
     if (t && t.kind === BLOCK_TOOL[block]) speedMultiplier = TIER_SPEED[t.tier];
-    if (inWater()) speedMultiplier *= 0.2;
+    if (inWater()) speedMultiplier *= 0.5;
     let damage = speedMultiplier / hardness;
     damage /= canHarvest(block, itemId) ? 30 : 100;
     if (damage >= 1) return 0;
@@ -317,7 +323,7 @@
   const playerMeshGroup = new THREE.Group();
   const _pmBody = new THREE.Mesh(
     new THREE.BoxGeometry(0.6, 1.2, 0.4),
-    new THREE.MeshLambertMaterial({ color: 0xe74c3c })
+    new THREE.MeshLambertMaterial({ color: 0x3f51b5 })
   );
   _pmBody.position.y = 0.6;
   playerMeshGroup.add(_pmBody);
@@ -329,6 +335,34 @@
   playerMeshGroup.add(_pmHead);
   playerMeshGroup.visible = false;
   scene.add(playerMeshGroup);
+
+  // Apply steve skin to player mesh faces
+  (function() {
+    const img = new Image();
+    img.onload = () => {
+      const S = img.width / 64;
+      function faceMat(sx, sy, sw, sh) {
+        const c = document.createElement('canvas'); c.width = sw; c.height = sh;
+        const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, sx*S, sy*S, sw*S, sh*S, 0, 0, sw, sh);
+        const t = new THREE.CanvasTexture(c);
+        t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+        return new THREE.MeshLambertMaterial({ map: t });
+      }
+      // Three.js face order: +X, -X, +Y, -Y, +Z (back), -Z (front)
+      _pmHead.material = [
+        faceMat(16,8,8,8), faceMat(0,8,8,8),
+        faceMat(8,0,8,8),  faceMat(16,0,8,8),
+        faceMat(24,8,8,8), faceMat(8,8,8,8),
+      ];
+      _pmBody.material = [
+        faceMat(28,20,4,12), faceMat(16,20,4,12),
+        faceMat(20,16,8,4),  faceMat(28,16,8,4),
+        faceMat(32,20,8,12), faceMat(20,20,8,12),
+      ];
+    };
+    img.src = 'assets/steve.png';
+  })();
 
   // ── Chunk world helpers ──────────────────────────────────────────────────
   const chunkLocal = (n) => ((n % CHUNK_W) + CHUNK_W) % CHUNK_W;
@@ -830,7 +864,6 @@
     }
     if (!sources.length) return;
     const visited = new Set();
-    visited.add(ek(x,y,z));
     for (const [sx,sy,sz] of sources) visited.add(ek(sx,sy,sz));
     const queue = [...sources];
     while (queue.length) {
@@ -914,6 +947,12 @@
       } else if (canHarvest(blk, mining.tool)) {
         spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk === GRASS ? DIRT : blk);
         if (blk === WOOD) queueLeafDecay(bx, by, bz);
+      }
+      // Durability damage
+      const toolSlot = inventory[hotbarSlot];
+      if (toolSlot && toolSlot.kind === 'tool') {
+        toolSlot.dur = (toolSlot.dur ?? TOOL_MAX_DUR[toolSlot.id] ?? 60) - 1;
+        if (toolSlot.dur <= 0) inventory[hotbarSlot] = null;
       }
       mining = null;
       crackMesh.visible = false;
@@ -1055,7 +1094,7 @@
   function addItem(itemId, count = 1) { return addStackable('item', itemId, count); }
   function addTool(itemId) {
     for (let i = 0; i < INV_SIZE; i++) {
-      if (!inventory[i]) { inventory[i] = { kind:'tool', id: itemId }; updateInventoryUI(); return true; }
+      if (!inventory[i]) { inventory[i] = { kind:'tool', id: itemId, dur: TOOL_MAX_DUR[itemId] ?? 60 }; updateInventoryUI(); return true; }
     }
     return false;
   }
@@ -1391,6 +1430,14 @@
         if (!cnt) { cnt = document.createElement('span'); cnt.className = 'cnt'; c.appendChild(cnt); }
         cnt.textContent = item.count;
       } else if (cnt) cnt.remove();
+      let db = c.querySelector('.dur-bar');
+      const showDur = item && item.kind === 'tool' && item.dur != null;
+      if (showDur) {
+        const pct = Math.max(0, item.dur / (TOOL_MAX_DUR[item.id] || 60));
+        if (!db) { db = document.createElement('div'); db.className = 'dur-bar'; c.appendChild(db); }
+        db.style.width = `calc(${Math.round(pct*100)}% - 4px)`;
+        db.style.background = durColor(pct);
+      } else if (db) db.remove();
     });
   }
   function updateInventoryUI() { updateHotbarUI(); if (invOpen) renderInventoryPanel(); }
@@ -1433,6 +1480,7 @@
     });
   }
 
+  function durColor(pct) { return pct > 0.5 ? '#5c5' : pct > 0.25 ? '#cc5' : '#c44'; }
   function slotHTML(item, extraClass='') {
     if (!item) return `<div class="iv-slot ${extraClass}"></div>`;
     const src = slotImage(item);
@@ -1441,7 +1489,12 @@
     const title = item.kind === 'block' ? '' :
                   item.kind === 'tool' ? (TOOLS[item.id]?.name || '') :
                                           (ITEMS[item.id]?.name || '');
-    return `<div class="iv-slot filled ${extraClass}" title="${title}"><div class="iv-swatch" ${bg}></div>${cnt}</div>`;
+    let durBar = '';
+    if (item.kind === 'tool' && item.dur != null) {
+      const pct = Math.max(0, item.dur / (TOOL_MAX_DUR[item.id] || 60));
+      durBar = `<div class="dur-bar" style="width:calc(${Math.round(pct*100)}% - 4px);background:${durColor(pct)}"></div>`;
+    }
+    return `<div class="iv-slot filled ${extraClass}" title="${title}"><div class="iv-swatch" ${bg}></div>${cnt}${durBar}</div>`;
   }
 
   // Click logic: left-click swap/pick up; right-click split (take half) or place 1
@@ -1655,6 +1708,12 @@
     waterAnimT += dt * 0.18;
     waterTex.offset.y = -waterAnimT;
     waterTex.offset.x = waterAnimT * 0.5;
+
+    const uw = inWater();
+    scene.background.setHex(uw ? 0x003366 : 0x88c5ff);
+    scene.fog.color.setHex(uw ? 0x003366 : 0x88c5ff);
+    scene.fog.near = uw ? 2  : 100;
+    scene.fog.far  = uw ? 16 : 240;
 
     moveBcastTimer += dt;
     if (moveBcastTimer > 0.05) {

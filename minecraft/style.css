@@ -320,6 +320,14 @@ body {
 .craft-out.can { box-shadow: 0 0 6px rgba(94,255,138,0.6); cursor: pointer; }
 .iv-slot { cursor: pointer; user-select: none; }
 .iv-slot:hover { background: rgba(255,255,255,0.12); }
+.dur-bar {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  height: 2px;
+  border-radius: 1px;
+  pointer-events: none;
+}
 
 #invCursor {
   position: fixed;
