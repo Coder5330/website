@@ -172,7 +172,8 @@
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 800);
   scene.add(camera);
 
-  scene.add(new THREE.AmbientLight(0xd8eaff, 1.1));
+  const ambientLight = new THREE.AmbientLight(0xd8eaff, 1.1);
+  scene.add(ambientLight);
   const sun = new THREE.DirectionalLight(0xfff5e0, 1.0);
   sun.position.set(60, 100, 40);
   scene.add(sun);
@@ -1731,6 +1732,15 @@
 
     const uw = inWater();
     document.getElementById('underwaterOverlay').style.display = uw ? 'block' : 'none';
+
+    // Dim ambient when underground (no sky access above player's head)
+    const headY = Math.floor(player.pos.y) + 1;
+    const px = Math.floor(player.pos.x), pz = Math.floor(player.pos.z);
+    let hasSky = true;
+    for (let sy = headY + 1; sy < WY; sy++) {
+      if (SOLID.has(getB(px, sy, pz))) { hasSky = false; break; }
+    }
+    ambientLight.intensity = hasSky ? 1.1 : 0.15;
 
     moveBcastTimer += dt;
     if (moveBcastTimer > 0.05) {
