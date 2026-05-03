@@ -235,7 +235,7 @@
     map: waterTex, color: 0x99ccff, transparent: true, opacity: 0.78, depthWrite: false,
     side: THREE.DoubleSide,
   });
-  const craftingTableMat = new THREE.MeshLambertMaterial({ color: 0x8b6340 }); // placeholder until sprite loads
+  let craftingTableMat = new THREE.MeshLambertMaterial({ color: 0x8b6340 }); // replaced by array once sprite loads
 
   // Ore textures
   const oreMaterials = {};
@@ -272,25 +272,27 @@
   };
   oreImg.src = 'assets/tex_array_1.png';
 
-  // Crafting-table texture + thumbnail (sprite sheet: 3 panels wide, take panel 3)
+  // Crafting-table texture + thumbnail (sprite sheet: 3 panels wide)
+  // Panel 0 = side, panel 1 = front/side, panel 2 = top (3x3 grid)
   const ctImg = new Image();
   ctImg.onload = () => {
-    const panelW = Math.floor(ctImg.width / 3);
-    const sx = 2 * panelW; // 3rd panel (0-indexed)
-    // Texture
-    const texC = document.createElement('canvas'); texC.width = texC.height = 64;
-    const texCtx = texC.getContext('2d'); texCtx.imageSmoothingEnabled = false;
-    texCtx.drawImage(ctImg, sx, 0, panelW, ctImg.height, 0, 0, 64, 64);
-    const ctTex = new THREE.CanvasTexture(texC);
-    ctTex.magFilter = THREE.NearestFilter; ctTex.minFilter = THREE.NearestFilter;
-    ctTex.colorSpace = THREE.SRGBColorSpace;
-    craftingTableMat.map = ctTex;
-    craftingTableMat.color.setHex(0xffffff);
-    craftingTableMat.needsUpdate = true;
-    // Thumbnail
+    const pw = Math.floor(ctImg.width / 3), ph = ctImg.height;
+    function ctPanel(px) {
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(ctImg, px, 0, pw, ph, 0, 0, 64, 64);
+      const t = new THREE.CanvasTexture(c);
+      t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+      t.colorSpace = THREE.SRGBColorSpace;
+      return new THREE.MeshLambertMaterial({ map: t });
+    }
+    const side = ctPanel(0), front = ctPanel(pw), top = ctPanel(pw * 2);
+    // Three.js face order: +X, -X, +Y(top), -Y(bot), +Z, -Z
+    craftingTableMat = [side, side, top, side, front, front];
+    // Thumbnail: use top face
     const c = document.createElement('canvas'); c.width = c.height = 32;
     const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
-    cx.drawImage(ctImg, sx, 0, panelW, ctImg.height, 0, 0, 32, 32);
+    cx.drawImage(ctImg, pw * 2, 0, pw, ph, 0, 0, 32, 32);
     blockThumbs[CRAFTING_TABLE] = c.toDataURL();
     if (running) markAllChunksDirty();
     updateHotbarUI();
@@ -437,9 +439,9 @@
     mountain: { baseH:30, mtnAmp:50, hillAmp:14, detAmp:5, surf:STONE, snowH:48, treeRate:0.009 },
   };
   function getBiome(wx, wz) {
-    const temp  = noise2(wx, wz, 0.0025, worldSeed ^ 0xbabe1);
-    const rough = noise2(wx, wz, 0.003,  worldSeed ^ 0xdead3);
-    const moist = noise2(wx, wz, 0.0025, worldSeed ^ 0xcafe2);
+    const temp  = noise2(wx, wz, 0.006, worldSeed ^ 0xbabe1);
+    const rough = noise2(wx, wz, 0.007, worldSeed ^ 0xdead3);
+    const moist = noise2(wx, wz, 0.006, worldSeed ^ 0xcafe2);
     if (rough > 0.72) return 'mountain';
     if (temp > 0.68 && moist < 0.38) return 'desert';
     if (temp > 0.58) return 'savanna';
