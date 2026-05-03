@@ -413,3 +413,12 @@
 
   show('menu');
 })();
+
+function getMusicRate() {
+  // Base speed is level 0 = 150px/s, map that to playbackRate 1.0
+  return LEVELS[currentLevel].speed / 150;
+}
+
+function syncMusic() {
+  music.playbackRate = getMusicRate();
+}
