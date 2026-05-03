@@ -26,6 +26,27 @@
     return 0;
   }
 
+  function updateLevelBar() {
+    const levelItems = document.querySelectorAll('.level-item');
+    const levelSeparators = document.querySelectorAll('.level-separator');
+    
+    levelItems.forEach((item, index) => {
+      item.classList.remove('active', 'completed');
+      if (index < currentLevel) {
+        item.classList.add('completed');
+      } else if (index === currentLevel) {
+        item.classList.add('active');
+      }
+    });
+    
+    levelSeparators.forEach((sep, index) => {
+      sep.classList.remove('completed');
+      if (index < currentLevel) {
+        sep.classList.add('completed');
+      }
+    });
+  }
+
   function fallSpeed() {
     return LEVELS[currentLevel].speed;
   }
@@ -44,7 +65,6 @@
   const board = document.getElementById('board');
   const columns = [...document.querySelectorAll('.column')];
   const scoreEl = document.getElementById('score');
-  const levelEl = document.getElementById('level');
   const finalScoreEl = document.getElementById('finalScore');
   const music = document.getElementById('music');
 
@@ -101,7 +121,7 @@
     const newLevel = getCurrentLevel();
     if (newLevel !== currentLevel) {
       currentLevel = newLevel;
-      levelEl.textContent = LEVELS[currentLevel].name;
+      updateLevelBar();
     }
   }
 
@@ -173,7 +193,7 @@
     tilesHit = 0;
     currentLevel = 0;
     scoreEl.textContent = '0';
-    levelEl.textContent = LEVELS[0].name;
+    updateLevelBar();
     lastFrame = 0;
     lastColumn = -1;
     gameStartTime = Date.now();
