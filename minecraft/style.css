@@ -204,7 +204,7 @@ body {
   margin: 0 auto 1.2rem;
 }
 .mc-join input {
-  flex: 1;
+  width: 100px;
   padding: 11px 6px;
   font-size: 1.15rem;
   font-weight: bold;
