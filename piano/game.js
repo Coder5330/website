@@ -190,6 +190,7 @@
     currentLevel = 0;
     scoreEl.textContent = '0';
     updateLevelBar();
+    syncMusic();
     lastFrame = 0;
     lastColumn = -1;
     gameStartTime = Date.now();
