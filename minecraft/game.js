@@ -879,11 +879,12 @@
 
     if (thirdPerson) {
       const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
-      camera.position.set(player.pos.x + sy * 4, player.pos.y + EYE + 2, player.pos.z + cy * 4);
+      camera.position.set(player.pos.x + sy * 4, player.pos.y + 2.5, player.pos.z + cy * 4);
       camera.lookAt(player.pos.x, player.pos.y + 1.0, player.pos.z);
       hand.visible = false;
       playerMeshGroup.position.set(player.pos.x, player.pos.y, player.pos.z);
-      playerMeshGroup.rotation.y = -player.yaw;
+      playerMeshGroup.rotation.y = player.yaw;
+      _pmHead.rotation.x = player.pitch;
       playerMeshGroup.visible = true;
     } else {
       camera.position.set(player.pos.x, player.pos.y + EYE, player.pos.z);
