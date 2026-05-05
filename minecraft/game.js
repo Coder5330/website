@@ -14,8 +14,8 @@
   const WY = 64;
   const SEA_LEVEL = 14;
   const ATLAS_LAYERS = 8;
-  const MESH_DIST = 3;  // build visible meshes within this chunk radius
-  const GEN_DIST  = 4;  // pre-generate data one ring beyond so edge faces cull correctly
+  const MESH_DIST = 4;  // build visible meshes within this chunk radius
+  const GEN_DIST  = 5;  // pre-generate data one ring beyond so edge faces cull correctly
 
   // ── Tool items ───────────────────────────────────────────────────────────
   const ITEM_WOOD_PICK=101, ITEM_STONE_PICK=102, ITEM_IRON_PICK=103, ITEM_DIAMOND_PICK=104;
@@ -42,10 +42,15 @@
   };
 
   const ITEM_PLANK = 106, ITEM_STICK = 107, ITEM_APPLE = 108;
+  const ITEM_IRON = 201, ITEM_DIAMOND_GEM = 202, ITEM_GOLD = 203, ITEM_COAL = 204;
   const ITEMS = {
     [ITEM_PLANK]: { name: 'Plank' },
     [ITEM_STICK]: { name: 'Stick' },
     [ITEM_APPLE]: { name: 'Apple' },
+    [ITEM_IRON]:        { name: 'Iron Ingot' },
+    [ITEM_DIAMOND_GEM]: { name: 'Diamond' },
+    [ITEM_GOLD]:        { name: 'Gold Ingot' },
+    [ITEM_COAL]:        { name: 'Coal' },
   };
 
   // ── Recipes ──────────────────────────────────────────────────────────────
@@ -59,25 +64,30 @@
     { shape:['pp','pp'],
       key:{ p:['item', ITEM_PLANK] },
       out:['block', CRAFTING_TABLE, 1] },
-    // Pickaxes (3-wide top row)
-    { shape:['ppp',' s ',' s '], key:{ p:['item',ITEM_PLANK],  s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_PICK, 1] },
-    { shape:['ppp',' s ',' s '], key:{ p:['block',STONE],      s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_PICK, 1] },
-    { shape:['ppp',' s ',' s '], key:{ p:['block',IRON_ORE],   s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_PICK, 1] },
-    { shape:['ppp',' s ',' s '], key:{ p:['block',DIAMOND_ORE],s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_PICK, 1] },
+    // Ore → ingot/gem (smelt by placing 1 ore anywhere in crafting grid)
+    { shapeless:[['block', IRON_ORE,    1]], out:['item', ITEM_IRON,        1] },
+    { shapeless:[['block', GOLD_ORE,    1]], out:['item', ITEM_GOLD,        1] },
+    { shapeless:[['block', DIAMOND_ORE, 1]], out:['item', ITEM_DIAMOND_GEM, 1] },
+    { shapeless:[['block', COAL_ORE,    1]], out:['item', ITEM_COAL,        4] },
+    // Pickaxes (3-wide top row, requires crafting table)
+    { shape:['ppp',' s ',' s '], key:{ p:['item',ITEM_PLANK],       s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_PICK, 1] },
+    { shape:['ppp',' s ',' s '], key:{ p:['block',STONE],           s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_PICK, 1] },
+    { shape:['ppp',' s ',' s '], key:{ p:['item',ITEM_IRON],        s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_PICK, 1] },
+    { shape:['ppp',' s ',' s '], key:{ p:['item',ITEM_DIAMOND_GEM], s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_PICK, 1] },
     // Axes
-    { shape:['pp','ps',' s'],    key:{ p:['item',ITEM_PLANK],  s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_AXE, 1] },
-    { shape:['pp','ps',' s'],    key:{ p:['block',STONE],      s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_AXE, 1] },
-    { shape:['pp','ps',' s'],    key:{ p:['block',IRON_ORE],   s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_AXE, 1] },
-    { shape:['pp','ps',' s'],    key:{ p:['block',DIAMOND_ORE],s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_AXE, 1] },
+    { shape:['pp','ps',' s'],    key:{ p:['item',ITEM_PLANK],       s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_AXE, 1] },
+    { shape:['pp','ps',' s'],    key:{ p:['block',STONE],           s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_AXE, 1] },
+    { shape:['pp','ps',' s'],    key:{ p:['item',ITEM_IRON],        s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_AXE, 1] },
+    { shape:['pp','ps',' s'],    key:{ p:['item',ITEM_DIAMOND_GEM], s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_AXE, 1] },
     // Shovels
-    { shape:['p','s','s'],       key:{ p:['item',ITEM_PLANK],  s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_SHOVEL, 1] },
-    { shape:['p','s','s'],       key:{ p:['block',STONE],      s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_SHOVEL, 1] },
-    { shape:['p','s','s'],       key:{ p:['block',IRON_ORE],   s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_SHOVEL, 1] },
+    { shape:['p','s','s'],       key:{ p:['item',ITEM_PLANK],       s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_SHOVEL, 1] },
+    { shape:['p','s','s'],       key:{ p:['block',STONE],           s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_SHOVEL, 1] },
+    { shape:['p','s','s'],       key:{ p:['item',ITEM_IRON],        s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_SHOVEL, 1] },
     // Swords
-    { shape:['p','p','s'],       key:{ p:['item',ITEM_PLANK],  s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_SWORD, 1] },
-    { shape:['p','p','s'],       key:{ p:['block',STONE],      s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_SWORD, 1] },
-    { shape:['p','p','s'],       key:{ p:['block',IRON_ORE],   s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_SWORD, 1] },
-    { shape:['p','p','s'],       key:{ p:['block',DIAMOND_ORE],s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_SWORD, 1] },
+    { shape:['p','p','s'],       key:{ p:['item',ITEM_PLANK],       s:['item',ITEM_STICK] }, out:['tool', ITEM_WOOD_SWORD, 1] },
+    { shape:['p','p','s'],       key:{ p:['block',STONE],           s:['item',ITEM_STICK] }, out:['tool', ITEM_STONE_SWORD, 1] },
+    { shape:['p','p','s'],       key:{ p:['item',ITEM_IRON],        s:['item',ITEM_STICK] }, out:['tool', ITEM_IRON_SWORD, 1] },
+    { shape:['p','p','s'],       key:{ p:['item',ITEM_DIAMOND_GEM], s:['item',ITEM_STICK] }, out:['tool', ITEM_DIAMOND_SWORD, 1] },
   ];
 
   const BLOCK_TOOL = {
@@ -136,6 +146,8 @@
 
   // ── State ────────────────────────────────────────────────────────────────
   let myId='', myName='Player', myColor=0xe74c3c;
+  // Unique per browser tab so two people on the same account can still see each other
+  const clientId = Math.random().toString(36).slice(2, 10);
   let others = {};
   let channel=null, isHost=false, roomCode='', worldSeed=1;
   let hotbarSlot=0, running=false;
@@ -329,14 +341,68 @@
   selectMesh.visible = false; selectMesh.frustumCulled = false;
   scene.add(selectMesh);
 
-  const hand = new THREE.Mesh(
-    new THREE.BoxGeometry(0.18, 0.55, 0.18),
-    new THREE.MeshLambertMaterial({ color: 0xf5c896 })
-  );
+  // ── View-model hand ──────────────────────────────────────────────────────
+  const hand = new THREE.Group();
   hand.position.set(0.42, -0.45, -0.65);
   hand.rotation.x = -0.35;
   camera.add(hand);
   let armSwing = 0;
+
+  const handFlesh = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.55, 0.18),
+    new THREE.MeshLambertMaterial({ color: 0xf5c896 })
+  );
+  hand.add(handFlesh);
+
+  // Cache loaded tool textures so we don't reload every frame
+  const _toolTexCache = {};
+  function _getToolTex(src) {
+    if (!_toolTexCache[src]) {
+      const t = new THREE.TextureLoader().load(src);
+      t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+      _toolTexCache[src] = t;
+    }
+    return _toolTexCache[src];
+  }
+
+  let handItemMesh = null;
+  let _lastHandKey = '';
+
+  function refreshHandItem() {
+    if (handItemMesh) { hand.remove(handItemMesh); handItemMesh.geometry?.dispose(); handItemMesh = null; }
+    const slot = inventory[hotbarSlot];
+    if (!slot) { handFlesh.visible = true; return; }
+
+    if (slot.kind === 'tool') {
+      const tdef = TOOLS[slot.id];
+      if (tdef?.img) {
+        const tex = _getToolTex(tdef.img);
+        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.1, side: THREE.DoubleSide });
+        handItemMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.52), mat);
+        handItemMesh.position.set(0.04, -0.04, 0.06);
+        handItemMesh.rotation.set(-0.1, 0.12, 0.38);
+        hand.add(handItemMesh);
+        handFlesh.visible = false;
+      } else { handFlesh.visible = true; }
+
+    } else if (slot.kind === 'block') {
+      const id = slot.block;
+      const mat = (id === CRAFTING_TABLE) ? craftingTableMat
+                : (id === WATER)          ? waterMaterial
+                : (oreMaterials[id])      ? oreMaterials[id]
+                                          : blockMaterial;
+      const geo = (blockGeos[id] || blockGeos[STONE]).clone();
+      geo.scale(0.38, 0.38, 0.38);
+      handItemMesh = new THREE.Mesh(geo, mat);
+      handItemMesh.position.set(0.04, -0.06, 0);
+      handItemMesh.rotation.set(0.3, -0.45, 0.2);
+      hand.add(handItemMesh);
+      handFlesh.visible = false;
+
+    } else {
+      handFlesh.visible = true;
+    }
+  }
 
   // ── Third-person player mesh ─────────────────────────────────────────────
   // Proportions: legs 0-0.75, torso 0.75-1.5, head 1.5-2.0
@@ -396,13 +462,19 @@
         faceMat(4,16,4,4),  faceMat(8,16,4,4),
         faceMat(12,20,4,12),faceMat(4,20,4,12),
       ];
-      // Left leg: 64x64 skins have it at x=16-32 y=48-64; fall back to right leg
-      const useNewLeg = img.height >= 64;
-      _pmLegL.material = useNewLeg ? [
+      // Left leg: 64x64 skins have it at x=16-32 y=48-64.
+      // Check logical height (actual px / scale factor) so high-res 128x64 skins don't false-positive.
+      const logicalH = img.height / S;
+      _pmLegL.material = logicalH >= 64 ? [
         faceMat(24,52,4,12), faceMat(16,52,4,12),
         faceMat(20,48,4,4),  faceMat(24,48,4,4),
         faceMat(28,52,4,12), faceMat(20,52,4,12),
-      ] : _pmLegR.material;
+      ] : [
+        // Mirror right leg for 64x32 skins (swap L/R side faces)
+        faceMat(8,20,4,12), faceMat(0,20,4,12),
+        faceMat(4,16,4,4),  faceMat(8,16,4,4),
+        faceMat(4,20,4,12), faceMat(12,20,4,12),
+      ];
     };
     img.src = 'assets/steve.png';
   })();
@@ -477,12 +549,12 @@
   }
   // ── Biomes ───────────────────────────────────────────────────────────────
   const BIOMES = {
-    forest:   { baseH:20, mtnAmp:36, hillAmp:16, detAmp:5, surf:GRASS, snowH:54, treeRate:0.040 },
-    plains:   { baseH:18, mtnAmp:12, hillAmp:6,  detAmp:3, surf:GRASS, snowH:54, treeRate:0.005 },
-    savanna:  { baseH:19, mtnAmp:20, hillAmp:10, detAmp:4, surf:GRASS, snowH:999,treeRate:0.50  },
-    desert:   { baseH:17, mtnAmp:18, hillAmp:8,  detAmp:4, surf:SAND,  snowH:999,treeRate:0     },
-    cold:     { baseH:17, mtnAmp:16, hillAmp:6,  detAmp:3, surf:SNOW,  snowH:10, treeRate:0.005 },
-    mountain: { baseH:32, mtnAmp:56, hillAmp:18, detAmp:6, surf:STONE, snowH:48, treeRate:0.009 },
+    forest:   { baseH:20, mtnAmp:52, hillAmp:24, detAmp:8, surf:GRASS, snowH:54, treeRate:0.08  },
+    plains:   { baseH:18, mtnAmp:22, hillAmp:12, detAmp:5, surf:GRASS, snowH:54, treeRate:0.018 },
+    savanna:  { baseH:19, mtnAmp:28, hillAmp:14, detAmp:6, surf:GRASS, snowH:999,treeRate:0.50  },
+    desert:   { baseH:17, mtnAmp:26, hillAmp:12, detAmp:6, surf:SAND,  snowH:999,treeRate:0     },
+    cold:     { baseH:17, mtnAmp:24, hillAmp:12, detAmp:5, surf:SNOW,  snowH:10, treeRate:0.018 },
+    mountain: { baseH:32, mtnAmp:76, hillAmp:26, detAmp:9, surf:STONE, snowH:48, treeRate:0.015 },
   };
   function getBiome(wx, wz) {
     const temp  = noise2(wx, wz, 0.006, worldSeed ^ 0xbabe1);
@@ -498,8 +570,8 @@
   function heightAt(wx, wz, biome) {
     const b = BIOMES[biome];
     let h = b.baseH;
-    h += (noise2(wx, wz, 0.012, worldSeed)       - 0.35) * b.mtnAmp;
-    h += noise2(wx, wz, 0.045, worldSeed^0x9e37) * b.hillAmp;
+    h += (noise2(wx, wz, 0.012, worldSeed)       - 0.50) * b.mtnAmp;
+    h += (noise2(wx, wz, 0.045, worldSeed^0x9e37) - 0.5) * b.hillAmp;
     h += noise2(wx, wz, 0.18,  worldSeed^0x12af) * b.detAmp;
     return Math.max(2, Math.min(WY - 4, Math.floor(h)));
   }
@@ -901,12 +973,19 @@
     }
 
     if (thirdPerson) {
-      const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
-      // Camera stays 4 blocks behind at fixed height; lookAt shifts with pitch
-      camera.position.set(player.pos.x + sy * 4, player.pos.y + 2.5, player.pos.z + cy * 4);
-      camera.lookAt(player.pos.x, player.pos.y + 1.0 - Math.sin(player.pitch) * 3, player.pos.z);
+      const DIST = 4;
+      const px = player.pos.x, py = player.pos.y, pz = player.pos.z;
+      const eyeY = py + EYE;
+      // Orbit camera: sits DIST behind the player eye in both yaw and pitch planes
+      // forward direction = (-sin(yaw)*cos(pitch), sin(pitch), -cos(yaw)*cos(pitch))
+      // camera goes the opposite way
+      const camX = px + Math.sin(player.yaw) * Math.cos(player.pitch) * DIST;
+      const camY = eyeY - Math.sin(player.pitch) * DIST;
+      const camZ = pz + Math.cos(player.yaw) * Math.cos(player.pitch) * DIST;
+      camera.position.set(camX, camY, camZ);
+      camera.lookAt(px, eyeY, pz);
       hand.visible = false;
-      playerMeshGroup.position.set(player.pos.x, player.pos.y, player.pos.z);
+      playerMeshGroup.position.set(px, py, pz);
       playerMeshGroup.rotation.y = player.yaw;
       _pmHead.rotation.x = player.pitch;
       playerMeshGroup.visible = true;
@@ -973,14 +1052,15 @@
   }
 
   function afterBlockRemoved(x, y, z) {
-    // Sand gravity: cascade sand fall upward from cleared block
+    // Gravity blocks: cascade any sand/snow fall upward from cleared block
     let clearY = y;
-    while (clearY + 1 < WY && getB(x, clearY+1, z) === SAND) {
+    while (clearY + 1 < WY && (getB(x, clearY+1, z) === SAND || getB(x, clearY+1, z) === SNOW)) {
       const fromY = clearY + 1;
+      const fallingB = getB(x, fromY, z);
       let landY = clearY;
       while (landY > 0 && getB(x, landY-1, z) === AIR) landY--;
-      setB(x, fromY, z, AIR);  bcast('block',{x, y:fromY, z, v:AIR});
-      setB(x, landY, z, SAND); bcast('block',{x, y:landY, z, v:SAND});
+      setB(x, fromY, z, AIR);      bcast('block', {x, y:fromY, z, v:AIR});
+      setB(x, landY, z, fallingB); bcast('block', {x, y:landY, z, v:fallingB});
       clearY = fromY;
     }
     // Water flow from adjacent water sources
@@ -1009,8 +1089,9 @@
       const blk = getB(hit.x, hit.y, hit.z);
       const tool = getSelectedTool();
       const total = getMineTime(blk, tool);
-      if (!total || total === Infinity) return;
-      mining = { x: hit.x, y: hit.y, z: hit.z, timer: 0, total, block: blk, tool };
+      if (total === Infinity || total == null) return;
+      // total=0 means instant-mine; use a tiny floor so the crack animation still ticks once
+      mining = { x: hit.x, y: hit.y, z: hit.z, timer: 0, total: Math.max(total, 0.05), block: blk, tool };
     }
     mining.timer += dt;
     const progress = mining.timer / mining.total;
@@ -1030,8 +1111,14 @@
         if (r < 0.05)      spawnItemDrop(bx+0.5, by+0.5, bz+0.5, ITEM_STICK);
         else if (r < 0.07) spawnItemDrop(bx+0.5, by+0.5, bz+0.5, ITEM_APPLE);
       } else if (canHarvest(blk, mining.tool)) {
-        spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk === GRASS ? DIRT : blk);
-        if (blk === WOOD) queueLeafDecay(bx, by, bz);
+        const t = mining.tool != null ? TOOLS[mining.tool] : null;
+        const preferredKind = BLOCK_TOOL[blk];
+        // Require the right tool type to get a drop (e.g. snow needs shovel, wood needs axe)
+        const hasRightKind = !preferredKind || (t && t.kind === preferredKind);
+        if (hasRightKind) {
+          spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk === GRASS ? DIRT : blk);
+          if (blk === WOOD) queueLeafDecay(bx, by, bz);
+        }
       }
       // Durability damage
       const toolSlot = inventory[hotbarSlot];
@@ -1071,7 +1158,11 @@
 
   // ── Dropped items ────────────────────────────────────────────────────────
   const drops = [];
-  const ITEM_DROP_COLOR = { [ITEM_STICK]: 0xa07030, [ITEM_APPLE]: 0xdd2211 };
+  const ITEM_DROP_COLOR = {
+    [ITEM_STICK]: 0xa07030, [ITEM_APPLE]: 0xdd2211,
+    [ITEM_IRON]: 0xcccccc, [ITEM_DIAMOND_GEM]: 0x55eeff,
+    [ITEM_GOLD]: 0xffcc00, [ITEM_COAL]: 0x333333,
+  };
 
   function _spawnDrop(x, y, z, blockId, itemId) {
     let mesh;
@@ -1142,6 +1233,11 @@
   }
 
   function updateHand(dt) {
+    // Refresh item mesh when held slot/item changes
+    const s = inventory[hotbarSlot];
+    const key = hotbarSlot + '_' + (s ? s.kind + (s.id ?? s.block ?? '') : '');
+    if (key !== _lastHandKey) { _lastHandKey = key; refreshHandItem(); }
+
     if (mouseDownLeft && mining) {
       armSwing += dt * 6;
       if (armSwing > Math.PI * 2) armSwing -= Math.PI * 2;
@@ -1162,18 +1258,32 @@
     if (!slot || slot.kind !== kind) return false;
     return (kind === 'block') ? slot.block === id : slot.id === id;
   }
-  function addStackable(kind, id, count) {
-    for (let i = 0; i < INV_SIZE; i++) {
+  function addStackable(kind, id, n) {
+    const MAX = 64;
+    let rem = n;
+    // Fill existing partial stacks first
+    for (let i = 0; i < INV_SIZE && rem > 0; i++) {
       const s = inventory[i];
-      if (s && itemKindMatches(s, kind, id)) { s.count += count; updateInventoryUI(); return true; }
-    }
-    for (let i = 0; i < INV_SIZE; i++) {
-      if (!inventory[i]) {
-        inventory[i] = (kind === 'block') ? { kind, block: id, count } : { kind, id, count };
-        updateInventoryUI(); return true;
+      if (s && itemKindMatches(s, kind, id) && (s.count || 1) < MAX) {
+        const add = Math.min(rem, MAX - (s.count || 1));
+        s.count = (s.count || 1) + add;
+        rem -= add;
       }
     }
-    return false;
+    // Then start new slots for the overflow
+    while (rem > 0) {
+      let placed = false;
+      for (let i = 0; i < INV_SIZE; i++) {
+        if (!inventory[i]) {
+          const add = Math.min(rem, MAX);
+          inventory[i] = (kind === 'block') ? { kind, block: id, count: add } : { kind, id, count: add };
+          rem -= add; placed = true; break;
+        }
+      }
+      if (!placed) break;
+    }
+    updateInventoryUI();
+    return rem < n;
   }
   function addToInventory(blockId) { return addStackable('block', blockId, 1); }
   function addItem(itemId, count = 1) { return addStackable('item', itemId, count); }
@@ -1337,11 +1447,16 @@
     channel.on('presence', { event:'sync' }, () => {
       const all = Object.values(channel.presenceState()).flat();
       document.getElementById('onlineBadge').textContent = '👤 ' + all.length + ' online';
+      // Create meshes for anyone already in the room when we join
+      for (const p of all) {
+        if (p.clientId && p.clientId !== clientId)
+          ensureOther(p.clientId, p.color ?? 0x3498db, p.displayName ?? 'Player');
+      }
       if (isHost) sendEdits();
     });
     channel.on('presence', { event:'leave' }, ({ leftPresences }) => {
       const arr = Array.isArray(leftPresences) ? leftPresences : Object.values(leftPresences).flat();
-      arr.forEach(p => { if (p?.userId && p.userId !== myId) removeOther(p.userId); });
+      arr.forEach(p => { if (p?.clientId && p.clientId !== clientId) removeOther(p.clientId); });
     });
     channel.on('broadcast', { event:'req_edits' }, () => { if (isHost) sendEdits(); });
     channel.on('broadcast', { event:'edits' }, ({ payload }) => applyEditsBatch(payload.e || []));
@@ -1350,7 +1465,7 @@
       setBLocalOnly(payload.x, payload.y, payload.z, payload.v);
     });
     channel.on('broadcast', { event:'move' }, ({ payload }) => {
-      if (!payload || payload.id === myId) return;
+      if (!payload || payload.id === clientId) return;
       const o = ensureOther(payload.id, payload.color, payload.name);
       o.x=payload.x; o.y=payload.y; o.z=payload.z; o.yaw=payload.yaw;
       o.mesh.position.set(o.x, o.y, o.z);
@@ -1360,7 +1475,7 @@
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')
         console.error('[MC3D] channel error:', status);
       if (status !== 'SUBSCRIBED') return;
-      await channel.track({ userId: myId, displayName: myName });
+      await channel.track({ userId: myId, clientId, displayName: myName, color: myColor });
       if (!isHost) {
         bcast('req_edits', {});
         setTimeout(() => bcast('req_edits', {}), 1500);
@@ -1475,8 +1590,36 @@
     cx.fillStyle = '#228822'; cx.fillRect(14, 5, 4, 8);
     return c.toDataURL();
   }
+  function makeIngotThumb(fill, stripe) {
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const cx = c.getContext('2d');
+    cx.fillStyle = fill;    cx.fillRect(4, 10, 24, 12);
+    cx.fillStyle = stripe;  cx.fillRect(4, 10, 24, 4);
+    cx.strokeStyle = '#00000055'; cx.lineWidth = 1; cx.strokeRect(4, 10, 24, 12);
+    return c.toDataURL();
+  }
+  function makeGemThumb(fill) {
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const cx = c.getContext('2d');
+    cx.fillStyle = fill;
+    cx.beginPath(); cx.moveTo(16,4); cx.lineTo(28,12); cx.lineTo(28,20); cx.lineTo(16,28); cx.lineTo(4,20); cx.lineTo(4,12); cx.closePath(); cx.fill();
+    cx.strokeStyle = '#00000066'; cx.lineWidth = 1; cx.stroke();
+    return c.toDataURL();
+  }
+  function makeCoalThumb() {
+    const c = document.createElement('canvas'); c.width = c.height = 32;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#222'; cx.fillRect(8, 8, 16, 16);
+    cx.fillStyle = '#444'; cx.fillRect(8, 8, 8, 8);
+    cx.strokeStyle = '#000'; cx.lineWidth = 1; cx.strokeRect(8, 8, 16, 16);
+    return c.toDataURL();
+  }
   // Set canvas fallbacks immediately, then upgrade if image files exist
-  itemThumbs[ITEM_PLANK] = makePlankThumb();
+  itemThumbs[ITEM_PLANK]       = makePlankThumb();
+  itemThumbs[ITEM_IRON]        = makeIngotThumb('#ccc', '#eee');
+  itemThumbs[ITEM_GOLD]        = makeIngotThumb('#fc0', '#ffe066');
+  itemThumbs[ITEM_DIAMOND_GEM] = makeGemThumb('#4deeff');
+  itemThumbs[ITEM_COAL]        = makeCoalThumb();
   itemThumbs[ITEM_STICK] = makeStickThumb();
   itemThumbs[ITEM_APPLE] = makeAppleThumb();
   for (const [src, id] of [['assets/plank.png', ITEM_PLANK], ['assets/stick.png', ITEM_STICK]]) {
@@ -1815,6 +1958,16 @@
 
     const uw = inWater();
     document.getElementById('underwaterOverlay').style.display = uw ? 'block' : 'none';
+    if (uw) {
+      scene.fog.color.setHex(0x001a66);
+      scene.fog.near = 2; scene.fog.far = 14;
+    } else {
+      scene.fog.color.setHex(0x88c5ff);
+      // Altitude mist: fog closes in as player climbs above y=32 (0→1 from y32 to y56)
+      const altT = Math.max(0, Math.min(1, (player.pos.y - 32) / 24));
+      scene.fog.near = 100 - altT * 72;   // 100 at ground → 28 high up
+      scene.fog.far  = 240 - altT * 160;  // 240 at ground → 80 high up
+    }
 
     // Sky-light at player: check nearby columns, attenuate by horizontal distance.
     // Mimics Minecraft's sky light spreading sideways into cave entrances.
@@ -1850,7 +2003,7 @@
     if (moveBcastTimer > 0.05) {
       moveBcastTimer = 0;
       bcast('move', {
-        id: myId, name: myName, color: myColor,
+        id: clientId, name: myName, color: myColor,
         x: +player.pos.x.toFixed(2), y: +player.pos.y.toFixed(2), z: +player.pos.z.toFixed(2),
         yaw: +player.yaw.toFixed(2),
       });
