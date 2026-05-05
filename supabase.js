@@ -1,4 +1,4 @@
 // shared supabase client — include this before any other script that needs it
 const SUPABASE_URL = 'https://ssdspxaqxszhtnatzwso.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzZHNweGFxeHN6aHRuYXR6d3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MzYzNDIsImV4cCI6MjA5MzExMjM0Mn0.dQLzrWaD94jE9RsMhZM0Ofv_ZpEqbSOiUSKKeumTSxA';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtmd2Rrbnh0d2ltbHF5cGl0d3dmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NzMzNTIsImV4cCI6MjA5MzU0OTM1Mn0.sjliRGHAmcU2K-T7xovZjxVCEvRDFc6IAapKaaQqDXY';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
