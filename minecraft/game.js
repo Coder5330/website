@@ -567,13 +567,22 @@
     if (moist < 0.38) return 'plains';
     return 'forest';
   }
-  function heightAt(wx, wz, biome) {
-    const b = BIOMES[biome];
-    let h = b.baseH;
-    h += (noise2(wx, wz, 0.012, worldSeed)       - 0.50) * b.mtnAmp;
-    h += (noise2(wx, wz, 0.045, worldSeed^0x9e37) - 0.5) * b.hillAmp;
-    h += noise2(wx, wz, 0.18,  worldSeed^0x12af) * b.detAmp;
-    return Math.max(2, Math.min(WY - 4, Math.floor(h)));
+  function heightAt(wx, wz) {
+    const n1 = noise2(wx, wz, 0.012, worldSeed)        - 0.50;
+    const n2 = noise2(wx, wz, 0.045, worldSeed^0x9e37) - 0.50;
+    const n3 = noise2(wx, wz, 0.18,  worldSeed^0x12af);
+    // Blend biome params over a 16-block radius to eliminate cliff seams
+    let bH=0, bM=0, bHi=0, bD=0, tw=0;
+    for (let dz=-16; dz<=16; dz+=8) {
+      for (let dx=-16; dx<=16; dx+=8) {
+        const d2=dx*dx+dz*dz; if (d2>256) continue;
+        const w=1-Math.sqrt(d2)/16;
+        const b=BIOMES[getBiome(wx+dx, wz+dz)];
+        bH+=b.baseH*w; bM+=b.mtnAmp*w; bHi+=b.hillAmp*w; bD+=b.detAmp*w; tw+=w;
+      }
+    }
+    const h = bH/tw + n1*bM/tw + n2*bHi/tw + n3*bD/tw;
+    return Math.max(2, Math.min(WY-4, Math.floor(h)));
   }
 
   // ── Leaf decay ───────────────────────────────────────────────────────────
@@ -641,7 +650,7 @@
         const wx = cx * CHUNK_W + lx, wz = cz * CHUNK_W + lz;
         const col_biome = getBiome(wx, wz);
         const col_bp = BIOMES[col_biome];
-        const h = heightAt(wx, wz, col_biome);
+        const h = heightAt(wx, wz);
         heights[lz * CHUNK_W + lx] = h;
         biomes[lz * CHUNK_W + lx]  = col_biome;
         for (let y = 0; y < h; y++) {
@@ -871,7 +880,7 @@
   // ── Spawn search ─────────────────────────────────────────────────────────
   function findSpawn() {
     // Search outward from origin — prefer grass/dirt surface, skip snow/stone/water
-    const warmSurf = new Set([GRASS, DIRT, SAND]);
+    const warmSurf = new Set([GRASS, DIRT]);
     for (let r = 0; r < CHUNK_W * (MESH_DIST + 1); r++) {
       for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
@@ -1112,10 +1121,10 @@
         else if (r < 0.07) spawnItemDrop(bx+0.5, by+0.5, bz+0.5, ITEM_APPLE);
       } else if (canHarvest(blk, mining.tool)) {
         const t = mining.tool != null ? TOOLS[mining.tool] : null;
-        const preferredKind = BLOCK_TOOL[blk];
-        // Require the right tool type to get a drop (e.g. snow needs shovel, wood needs axe)
-        const hasRightKind = !preferredKind || (t && t.kind === preferredKind);
-        if (hasRightKind) {
+        // Only snow requires the right tool kind (shovel) to drop — everything else drops freely
+        const needsShovel = blk === SNOW;
+        const hasShovel = t && t.kind === 'shovel';
+        if (!needsShovel || hasShovel) {
           spawnDrop(bx + 0.5, by + 0.5, bz + 0.5, blk === GRASS ? DIRT : blk);
           if (blk === WOOD) queueLeafDecay(bx, by, bz);
         }
