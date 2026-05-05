@@ -24,9 +24,50 @@ function _esc(str) {
 
   // Fetch users first so scores/ctf can show emails
   await loadUsers();
+  loadSessions();
   loadScores();
   loadCtf();
+
+  // Auto-refresh sessions every 30s
+  setInterval(loadSessions, 30000);
 })();
+
+// ── Live Sessions ─────────────────────────────────────────────────────────────
+
+async function loadSessions() {
+  const el = document.getElementById('tab-sessions');
+  const { data, error } = await sb.rpc('get_live_sessions');
+  if (error) { el.innerHTML = `<p class="muted">Error: ${_esc(error.message)}</p>`; return; }
+  if (!data.length) { el.innerHTML = '<p class="muted">No active sessions.</p>'; return; }
+
+  const now = new Date();
+  const rows = data.map(s => {
+    const lastSeen = new Date(s.last_seen);
+    const minsAgo = Math.floor((now - lastSeen) / 60000);
+    const ago = minsAgo < 1 ? 'just now' : `${minsAgo}m ago`;
+    const started = new Date(s.session_start).toLocaleString();
+    return `
+    <tr>
+      <td>${_esc(s.email)}</td>
+      <td>${s.display_name ? _esc(s.display_name) : '<span style="color:#475569">—</span>'}</td>
+      <td><span class="badge badge-${s.role}">${_esc(s.role)}</span></td>
+      <td style="color:${minsAgo < 5 ? '#34d399' : '#94a3b8'}">${ago}</td>
+      <td style="color:#475569;font-size:11px">${started}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="table-wrap">
+      <div class="table-header">
+        <span class="table-title">LIVE SESSIONS</span>
+        <span class="table-count">${data.length} active · refreshes every 30s</span>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Email</th><th>Display Name</th><th>Role</th><th>Last Seen</th><th>Session Start</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
 
 // ── Users ────────────────────────────────────────────────────────────────────
 
