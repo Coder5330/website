@@ -124,7 +124,7 @@ body {
 #underwaterOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 40, 130, 0.45);
+  background: rgba(0, 40, 130, 0.18);
   pointer-events: none;
   display: none;
   z-index: 3;
