@@ -1278,10 +1278,16 @@
   function ensureOther(id, color, name) {
     if (others[id]?.mesh) return others[id];
     const grp = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.4), new THREE.MeshLambertMaterial({ color }));
-    body.position.y = 0.6; grp.add(body);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshLambertMaterial({ color: 0xffd6a8 }));
-    head.position.y = 1.45; grp.add(head);
+    grp.frustumCulled = false;
+    const mk = (geo, mat) => { const m = new THREE.Mesh(geo, mat); m.frustumCulled = false; return m; };
+    const legR = mk(new THREE.BoxGeometry(0.29,0.75,0.4), new THREE.MeshLambertMaterial({ color }));
+    legR.position.set(0.15, 0.375, 0); grp.add(legR);
+    const legL = mk(new THREE.BoxGeometry(0.29,0.75,0.4), new THREE.MeshLambertMaterial({ color }));
+    legL.position.set(-0.15, 0.375, 0); grp.add(legL);
+    const body = mk(new THREE.BoxGeometry(0.6,0.75,0.4), new THREE.MeshLambertMaterial({ color }));
+    body.position.y = 1.125; grp.add(body);
+    const head = mk(new THREE.BoxGeometry(0.5,0.5,0.5), new THREE.MeshLambertMaterial({ color: 0xffd6a8 }));
+    head.position.y = 1.75; grp.add(head);
     scene.add(grp);
     const label = document.createElement('div');
     label.className = 'name-tag'; label.textContent = name;
@@ -1344,13 +1350,15 @@
       setBLocalOnly(payload.x, payload.y, payload.z, payload.v);
     });
     channel.on('broadcast', { event:'move' }, ({ payload }) => {
-      if (payload.id === myId) return;
+      if (!payload || payload.id === myId) return;
       const o = ensureOther(payload.id, payload.color, payload.name);
       o.x=payload.x; o.y=payload.y; o.z=payload.z; o.yaw=payload.yaw;
       o.mesh.position.set(o.x, o.y, o.z);
-      o.mesh.rotation.y = -o.yaw;
+      o.mesh.rotation.y = o.yaw;
     });
     channel.subscribe(async status => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')
+        console.error('[MC3D] channel error:', status);
       if (status !== 'SUBSCRIBED') return;
       await channel.track({ userId: myId, displayName: myName });
       if (!isHost) {
