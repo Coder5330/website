@@ -8,6 +8,55 @@ html, body {
   overflow: hidden;
 }
 
+#levelBar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+  font-size: 1.2em;
+}
+
+.level-item {
+  opacity: 0.3;
+  transition: all 0.3s ease;
+}
+
+.level-item.active {
+  opacity: 1;
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+}
+
+.level-item.completed {
+  opacity: 0.6;
+}
+
+.level-separator {
+  opacity: 0.3;
+  font-size: 0.6em;
+}
+
+.level-separator.completed {
+  opacity: 0.6;
+}
+
+#hud {
+  text-align: center;
+  padding: 10px;
+}
+
+#score {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+#level {
+  font-size: 2em;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
 #app {
   height: calc(100% - 55px);
   margin-top: 55px;
@@ -77,7 +126,7 @@ button:hover { background: #1a7ae0; }
 
 .credit a { color: #aaa; }
 
-/* Game */
+/* ── Game ── */
 #game {
   padding: 0;
   position: relative;
@@ -171,7 +220,7 @@ button:hover { background: #1a7ae0; }
 
 #keyHints span:last-child { border-right: none; }
 
-/* Leaderboard */
+/* ── Leaderboard ── */
 #scoreList {
   list-style: none;
   counter-reset: rank;
@@ -213,7 +262,7 @@ button:hover { background: #1a7ae0; }
 
 #scoreList .empty::before { content: ""; }
 
-/* Game over */
+/* ── Game over ── */
 #nameEntry input {
   background: #222;
   border: 1px solid #444;
@@ -226,3 +275,72 @@ button:hover { background: #1a7ae0; }
 }
 
 #finalScore { color: #2d8cf0; font-weight: bold; }
+
+/* ── Mobile fixes ── */
+@media (max-width: 600px) {
+
+  #app {
+    margin-top: 0;
+    height: 100dvh;
+  }
+
+  #game {
+    height: 100dvh;
+  }
+
+  #hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px 4px;
+    background: rgba(17, 17, 17, 0.85);
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  #levelBar {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 1px;
+    font-size: 0.7em;
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 0;
+  }
+
+  .level-separator {
+    font-size: 0.4em;
+    letter-spacing: -3px;
+    opacity: 0.3;
+  }
+
+  #score {
+    font-size: 28px;
+    line-height: 1;
+    text-shadow: none;
+  }
+
+  #board {
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  #keyHints {
+    height: 80px;
+  }
+
+  #hitline {
+    bottom: 80px;
+  }
+
+  #keyHints span {
+    font-size: 18px;
+  }
+}

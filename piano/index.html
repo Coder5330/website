@@ -20,9 +20,21 @@
       <button id="leaderboardBtn">Leaderboard</button>
       <p class="credit">Music courtesy of <a href="http://www.classicals.de" target="_blank" rel="noopener">www.classicals.de</a></p>
     </div>
-
     <div id="game" class="screen hidden">
       <div id="hud">
+        <div id="levelBar">
+          <span class="level-item active" data-level="0">⭐</span>
+          <span class="level-separator">━━━</span>
+          <span class="level-item" data-level="1">⭐⭐</span>
+          <span class="level-separator">━━━</span>
+          <span class="level-item" data-level="2">⭐⭐⭐</span>
+          <span class="level-separator">━━━</span>
+          <span class="level-item" data-level="3">👑</span>
+          <span class="level-separator">━━━</span>
+          <span class="level-item" data-level="4">👑👑</span>
+          <span class="level-separator">━━━</span>
+          <span class="level-item" data-level="5">👑👑👑</span>
+        </div>
         <div id="score">0</div>
       </div>
       <div id="board">
@@ -36,7 +48,6 @@
         </div>
       </div>
     </div>
-
     <div id="gameover" class="screen hidden">
       <h2>Game Over</h2>
       <p>Score: <span id="finalScore">0</span></p>
@@ -49,14 +60,12 @@
         <button id="viewBoardBtn">Leaderboard</button>
       </div>
     </div>
-
     <div id="leaderboard" class="screen hidden">
       <h2>Leaderboard</h2>
       <ol id="scoreList"></ol>
       <button id="backBtn">Back</button>
     </div>
   </div>
-
   <audio id="music" src="assets/music.mp3" preload="auto" loop></audio>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../supabase.js"></script>
