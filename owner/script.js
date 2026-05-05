@@ -1,5 +1,9 @@
 let userMap = {}; // id -> { email, display_name }
 
+function _esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = '/auth/index.html'; return; }
@@ -38,8 +42,8 @@ async function loadUsers() {
     const joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
     return `
     <tr>
-      <td>${u.email || '—'}</td>
-      <td>${u.display_name || '<span style="color:#475569">—</span>'}</td>
+      <td>${_esc(u.email) || '—'}</td>
+      <td>${u.display_name ? _esc(u.display_name) : '<span style="color:#475569">—</span>'}</td>
       <td>
         <select class="role-select" data-uid="${u.id}" data-orig="${u.role}">
           <option value="user"  ${u.role==='user'  ? 'selected':''}>user</option>
@@ -121,9 +125,9 @@ async function loadScores() {
     const u = userMap[r.player_id];
     return `
     <tr id="sr-${r.player_id}-${r.game}">
-      <td>${u?.email || `<span class="mono">${r.player_id}</span>`}</td>
-      <td><span class="badge ${scoreBadge(r.game)}">${r.game}</span></td>
-      <td>${scoreSummary(r.game, r.payload)}</td>
+      <td>${u?.email ? _esc(u.email) : `<span class="mono">${r.player_id}</span>`}</td>
+      <td><span class="badge ${scoreBadge(r.game)}">${_esc(r.game)}</span></td>
+      <td>${_esc(scoreSummary(r.game, r.payload))}</td>
       <td><button class="btn-del" onclick="deleteScore('${r.player_id}','${r.game}',this)">del</button></td>
     </tr>`;
   }).join('');
@@ -167,7 +171,7 @@ async function loadCtf() {
     const u = userMap[pid];
     return `
     <tr>
-      <td>${u?.email || `<span class="mono">${pid}</span>`}</td>
+      <td>${u?.email ? _esc(u.email) : `<span class="mono">${pid}</span>`}</td>
       <td>${levels.sort((a,b) => a-b).join(', ')}</td>
       <td>${levels.length}</td>
       <td><button class="btn-del" onclick="deleteCtf('${pid}',this)">del all</button></td>

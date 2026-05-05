@@ -1,3 +1,7 @@
+function _esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = '/auth/index.html'; return; }
@@ -44,8 +48,8 @@ async function loadScores() {
   const rows = data.map(r => `
     <tr>
       <td class="mono">${r.player_id}</td>
-      <td><span class="badge ${scoreBadge(r.game)}">${r.game}</span></td>
-      <td>${scoreSummary(r.game, r.payload)}</td>
+      <td><span class="badge ${scoreBadge(r.game)}">${_esc(r.game)}</span></td>
+      <td>${_esc(scoreSummary(r.game, r.payload))}</td>
     </tr>`).join('');
 
   el.innerHTML = `

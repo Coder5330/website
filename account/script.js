@@ -132,6 +132,7 @@ function loadSettings(user, userProfile) {
     const name = document.getElementById('s-name').value.trim();
     const st = document.getElementById('s-name-st');
     if (name.includes('<')) { alert('STOP HACKING ME'); return; }
+    if (name.length > 32) { st.textContent = 'Max 32 characters'; st.className = 'field-status'; return; }
     st.textContent = 'Saving…'; st.className = 'field-status';
     const { error: err1 } = await sb.from('users').update({ display_name: name }).eq('id', user.id);
     const { error: err2 } = await sb.auth.updateUser({ data: { display_name: name } });
