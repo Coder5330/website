@@ -82,7 +82,11 @@ async function saveRole(btn) {
   btn.disabled = false;
 
   if (error) {
-    st.textContent = error.message; st.className = 'save-st err';
+    const msg = error.message.includes('protected') ? 'Protected — cannot change.'
+              : error.message.includes('owner')     ? 'Last owner — cannot remove.'
+              : error.message.includes('admin')     ? 'Last admin — cannot remove.'
+              : error.message;
+    st.textContent = msg; st.className = 'save-st err';
   } else {
     st.textContent = 'saved!'; st.className = 'save-st';
     sel.dataset.orig = role;
