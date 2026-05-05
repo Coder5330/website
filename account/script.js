@@ -3,6 +3,10 @@ function _initials(displayName) {
   return '?';
 }
 
+function _esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function _avatarColor(id) {
   let h = 0;
   for (const c of id) h = (h << 5) - h + c.charCodeAt(0);
@@ -56,8 +60,8 @@ async function loadProfile(user, userProfile) {
     <div class="profile-header">
       <div class="profile-avatar-lg" style="background:${color}">${_initials(userProfile?.display_name)}</div>
       <div>
-        <div class="profile-name">${name}</div>
-        <div class="profile-email">${userProfile?.email || user.email}</div>
+        <div class="profile-name">${_esc(name)}</div>
+        <div class="profile-email">${_esc(userProfile?.email || user.email)}</div>
         ${roleBox}
       </div>
     </div>
@@ -108,7 +112,7 @@ function loadSettings(user, userProfile) {
   el.innerHTML = `
     <div class="settings-section">
       <div class="section-title">Display name</div>
-      <input id="s-name" type="text" placeholder="Your name" value="${userProfile?.display_name || ''}">
+      <input id="s-name" type="text" placeholder="Your name" value="${_esc(userProfile?.display_name || '')}">
       <div class="field-row">
         <button id="s-name-btn" class="btn-primary">Save</button>
         <span id="s-name-st" class="field-status"></span>
@@ -158,7 +162,7 @@ function loadDelete(user, userProfile) {
 
   el.innerHTML = `
     <p class="muted">This is permanent and cannot be undone.</p>
-    <p class="muted">Type <strong style="color:#f1f5f9">${confirmStr}</strong> to confirm.</p>
+    <p class="muted">Type <strong style="color:#f1f5f9">${_esc(confirmStr)}</strong> to confirm.</p>
     <input id="d-conf" type="text" placeholder="Type to confirm" autocomplete="off">
     <div class="field-row">
       <button id="d-btn" class="btn-danger">Delete my account</button>
