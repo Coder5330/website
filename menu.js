@@ -75,11 +75,32 @@ function _avatarColor(id) {
   avatar.style.background = _avatarColor(user.id);
   avatar.textContent = _initials(user);
 
+  const { data: userRow } = await sb.from('users').select('role').eq('id', user.id).single();
+  const role = userRow?.role ?? 'user';
+
+  if (role === 'owner' || role === 'admin') {
+    const badge = document.createElement('a');
+    badge.href = role === 'owner' ? '/owner/index.html' : '/admin/index.html';
+    badge.textContent = role.toUpperCase();
+    badge.className = `menu-role-badge menu-role-${role}`;
+    right.appendChild(badge);
+  }
+
+  const panelLinks = role === 'owner'
+    ? `<div class="dd-sep"></div>
+       <div class="dd-item" data-a="admin">Admin Panel</div>
+       <div class="dd-item" data-a="owner">Owner Panel</div>`
+    : role === 'admin'
+    ? `<div class="dd-sep"></div>
+       <div class="dd-item" data-a="admin">Admin Panel</div>`
+    : '';
+
   const dropdown = document.createElement('div');
   dropdown.className = 'menu-dropdown';
   dropdown.innerHTML = `
     <div class="dd-item" data-a="profile">Profile</div>
     <div class="dd-item" data-a="settings">Settings</div>
+    ${panelLinks}
     <div class="dd-sep"></div>
     <div class="dd-item" data-a="signout">Sign out</div>
     <div class="dd-item dd-danger" data-a="delete">Delete account</div>`;
@@ -113,6 +134,8 @@ function _avatarColor(id) {
     dropdown.classList.remove('dd-open');
     if (action === 'profile')  window.location.href = '/account/index.html';
     if (action === 'settings') window.location.href = '/account/index.html#settings';
+    if (action === 'admin')    window.location.href = '/admin/index.html';
+    if (action === 'owner')    window.location.href = '/owner/index.html';
     if (action === 'signout')  { await sb.auth.signOut(); window.location.href = '/auth/index.html'; }
     if (action === 'delete')   window.location.href = '/account/index.html#delete';
   });

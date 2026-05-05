@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Admin Panel — Skill Hub</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .panel-wrap {
+      width: 100%;
+      max-width: 960px;
+      padding: 24px 16px 60px;
+    }
+    .panel-eyebrow {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: #f59e0b;
+      margin-bottom: 6px;
+    }
+    .panel-wrap h1 {
+      font-size: 22px;
+      color: #f1f5f9;
+      margin-bottom: 24px;
+    }
+    .panel-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 6px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: rgba(245,158,11,0.1);
+      border-color: rgba(245,158,11,0.3);
+      color: #f59e0b;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .table-wrap {
+      background: #131f35;
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      overflow: auto;
+    }
+    .table-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .table-title {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #64748b;
+    }
+    .table-count { font-size: 11px; color: #475569; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table th {
+      text-align: left;
+      padding: 8px 14px;
+      color: #64748b;
+      letter-spacing: 1px;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      white-space: nowrap;
+    }
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      color: #e5e7eb;
+      vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      letter-spacing: 1px;
+    }
+    .badge-typing  { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .badge-cps     { background: rgba(16,185,129,0.15); color: #34d399; }
+    .badge-clicker { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .badge-other   { background: rgba(100,116,139,0.15); color: #94a3b8; }
+    .mono { font-size: 10px; color: #475569; }
+    .muted { color: #475569; font-size: 12px; padding: 16px; }
+    .access-denied {
+      text-align: center;
+      padding: 60px 20px;
+      color: #ef4444;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+    <li><a href="../account/index.html">Account</a></li>
+  </ul>
+
+  <div class="panel-wrap">
+    <div class="panel-eyebrow">ADMIN PANEL</div>
+    <h1>Welcome back, Admin.</h1>
+    <div class="panel-tabs">
+      <button class="tab-btn active" data-tab="scores">Scores</button>
+      <button class="tab-btn" data-tab="ctf">CTF Progress</button>
+    </div>
+    <div id="tab-scores" class="tab-content active">
+      <p class="muted">Loading…</p>
+    </div>
+    <div id="tab-ctf" class="tab-content">
+      <p class="muted">Loading…</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -45,12 +45,20 @@ async function loadProfile(user, userProfile) {
   const name = userProfile?.display_name || userProfile?.username || user.email;
   const color = _avatarColor(user.id);
 
+  const role = userProfile?.role ?? 'user';
+  const roleBox = role === 'owner'
+    ? `<a href="/owner/index.html" class="role-badge role-owner">OWNER</a>`
+    : role === 'admin'
+    ? `<a href="/admin/index.html" class="role-badge role-admin">ADMIN</a>`
+    : '';
+
   el.innerHTML = `
     <div class="profile-header">
       <div class="profile-avatar-lg" style="background:${color}">${_initials(userProfile?.display_name)}</div>
       <div>
         <div class="profile-name">${name}</div>
         <div class="profile-email">${userProfile?.email || user.email}</div>
+        ${roleBox}
       </div>
     </div>
     <div class="section-title">Top scores</div>

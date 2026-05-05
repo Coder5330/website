@@ -62,3 +62,26 @@ input {
     box-sizing: border-box;
 }
 input:focus { border-color: rgba(0,245,255,0.4); }
+
+.role-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.role-badge:hover { opacity: 0.75; }
+.role-owner {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+}
+.role-admin {
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.3);
+  color: #fbbf24;
+}

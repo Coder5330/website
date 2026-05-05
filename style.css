@@ -62,6 +62,35 @@ ul {
   color: #00f5ff;
 }
 
+/* ── Role badge (menu) ── */
+.menu-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.menu-role-badge {
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.menu-role-badge:hover { opacity: 0.75; }
+.menu-role-owner {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+}
+.menu-role-admin {
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.3);
+  color: #fbbf24;
+}
+
 /* ── Hamburger & Drawer ── */
 .hamburger-btn {
   background: transparent;
