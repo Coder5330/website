@@ -58,7 +58,7 @@ async function loadProfile(user, userProfile) {
 
   el.innerHTML = `
     <div class="profile-header">
-      <div class="profile-avatar-lg" style="background:${color}">${_initials(userProfile?.display_name)}</div>
+      <div class="profile-avatar-lg" style="background:${color}">${_esc(_initials(userProfile?.display_name))}</div>
       <div>
         <div class="profile-name">${_esc(name)}</div>
         <div class="profile-email">${_esc(userProfile?.email || user.email)}</div>
