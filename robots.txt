@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /ctf/
+Disallow: /admin/
+Disallow: /owner/
+Disallow: /auth/
+Disallow: /account/
+
+Allow: /
