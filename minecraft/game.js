@@ -339,20 +339,30 @@
   let armSwing = 0;
 
   // ── Third-person player mesh ─────────────────────────────────────────────
+  // Proportions: legs 0-0.75, torso 0.75-1.5, head 1.5-2.0
   let thirdPerson = false;
   const playerMeshGroup = new THREE.Group();
-  const _pmBody = new THREE.Mesh(
-    new THREE.BoxGeometry(0.6, 1.2, 0.4),
-    new THREE.MeshLambertMaterial({ color: 0x3f51b5 })
-  );
-  _pmBody.position.y = 0.6;
+
+  const _pmLegR = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.75, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0x1a237e }));
+  _pmLegR.position.set(0.15, 0.375, 0);
+  playerMeshGroup.add(_pmLegR);
+
+  const _pmLegL = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.75, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0x1a237e }));
+  _pmLegL.position.set(-0.15, 0.375, 0);
+  playerMeshGroup.add(_pmLegL);
+
+  const _pmBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.75, 0.4),
+    new THREE.MeshLambertMaterial({ color: 0x3f51b5 }));
+  _pmBody.position.y = 1.125;
   playerMeshGroup.add(_pmBody);
-  const _pmHead = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.5),
-    new THREE.MeshLambertMaterial({ color: 0xffd6a8 })
-  );
-  _pmHead.position.y = 1.45;
+
+  const _pmHead = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.MeshLambertMaterial({ color: 0xffd6a8 }));
+  _pmHead.position.y = 1.75;
   playerMeshGroup.add(_pmHead);
+
   playerMeshGroup.visible = false;
   scene.add(playerMeshGroup);
 
@@ -369,7 +379,7 @@
         t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
         return new THREE.MeshLambertMaterial({ map: t });
       }
-      // Three.js face order: +X, -X, +Y, -Y, +Z (back), -Z (front)
+      // Three.js BoxGeometry face order: +X, -X, +Y, -Y, +Z(back), -Z(front)
       _pmHead.material = [
         faceMat(16,8,8,8), faceMat(0,8,8,8),
         faceMat(8,0,8,8),  faceMat(16,0,8,8),
@@ -380,6 +390,19 @@
         faceMat(20,16,8,4),  faceMat(28,16,8,4),
         faceMat(32,20,8,12), faceMat(20,20,8,12),
       ];
+      // Right leg skin: x=0-16 y=16-32 block
+      _pmLegR.material = [
+        faceMat(0,20,4,12), faceMat(8,20,4,12),
+        faceMat(4,16,4,4),  faceMat(8,16,4,4),
+        faceMat(12,20,4,12),faceMat(4,20,4,12),
+      ];
+      // Left leg: 64x64 skins have it at x=16-32 y=48-64; fall back to right leg
+      const useNewLeg = img.height >= 64;
+      _pmLegL.material = useNewLeg ? [
+        faceMat(24,52,4,12), faceMat(16,52,4,12),
+        faceMat(20,48,4,4),  faceMat(24,48,4,4),
+        faceMat(28,52,4,12), faceMat(20,52,4,12),
+      ] : _pmLegR.material;
     };
     img.src = 'assets/steve.png';
   })();
@@ -879,8 +902,9 @@
 
     if (thirdPerson) {
       const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
+      // Camera stays 4 blocks behind at fixed height; lookAt shifts with pitch
       camera.position.set(player.pos.x + sy * 4, player.pos.y + 2.5, player.pos.z + cy * 4);
-      camera.lookAt(player.pos.x, player.pos.y + 1.0, player.pos.z);
+      camera.lookAt(player.pos.x, player.pos.y + 1.0 - Math.sin(player.pitch) * 3, player.pos.z);
       hand.visible = false;
       playerMeshGroup.position.set(player.pos.x, player.pos.y, player.pos.z);
       playerMeshGroup.rotation.y = player.yaw;
