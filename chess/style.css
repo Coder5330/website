@@ -104,6 +104,27 @@
   flex-shrink: 0;
 }
 
+/* ── Back button row ── */
+.game-toprow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 2px;
+}
+.back-btn {
+  padding: 6px 14px;
+  background: #272522;
+  border: 1px solid #5a5652;
+  border-radius: 6px;
+  color: #bababa;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.back-btn:hover { background: #3d3a37; }
+
 /* ── Player bars (Lichess-style inline) ── */
 .player-bar {
   display: flex;
