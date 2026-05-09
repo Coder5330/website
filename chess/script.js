@@ -20,11 +20,15 @@ const KING   = 6;
 const WHITE =  1;
 const BLACK = -1;
 
-// Unicode glyphs: index by piece value (1-6), white vs black
-const GLYPHS = {
-  [WHITE]: { [PAWN]:'♙', [KNIGHT]:'♘', [BISHOP]:'♗', [ROOK]:'♖', [QUEEN]:'♕', [KING]:'♔' },
-  [BLACK]: { [PAWN]:'♟', [KNIGHT]:'♞', [BISHOP]:'♝', [ROOK]:'♜', [QUEEN]:'♛', [KING]:'♚' },
+// Piece images from assets/
+const PIECE_IMG = {
+  [WHITE]: { [PAWN]:'wpawn', [KNIGHT]:'wknight', [BISHOP]:'wbishop', [ROOK]:'wrook', [QUEEN]:'wqueen', [KING]:'wking' },
+  [BLACK]: { [PAWN]:'bpawn', [KNIGHT]:'bknight', [BISHOP]:'bbishop', [ROOK]:'brook', [QUEEN]:'bqueen', [KING]:'bking' },
 };
+function pieceImg(p, size='80%') {
+  const name = PIECE_IMG[pieceColor(p)][absPiece(p)];
+  return `<img src="assets/${name}.png" style="width:${size};height:${size};pointer-events:none" draggable="false">`;
+}
 
 
 // ── Game State ───────────────────────────────────────────────
@@ -565,7 +569,7 @@ function renderBoard() {
     if (p !== 0) {
       const span = document.createElement('span');
       span.className = 'piece';
-      span.textContent = GLYPHS[pieceColor(p)][absPiece(p)];
+      span.innerHTML = pieceImg(p);
       cell.appendChild(span);
       cell.classList.add('has-piece');
     }
@@ -576,8 +580,8 @@ function renderBoard() {
   }
 
   // Captured pieces
-  capturedWhiteEl.textContent = gameState.capturedByWhite.map(p => GLYPHS[WHITE][absPiece(p)]).join('');
-  capturedBlackEl.textContent = gameState.capturedByBlack.map(p => GLYPHS[BLACK][absPiece(p)]).join('');
+  capturedWhiteEl.innerHTML = gameState.capturedByWhite.map(p => pieceImg(Math.abs(p), '22px')).join('');
+  capturedBlackEl.innerHTML = gameState.capturedByBlack.map(p => pieceImg(-Math.abs(p), '22px')).join('');
 }
 
 function updateStatus() {
