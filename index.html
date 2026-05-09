@@ -4,126 +4,429 @@
   <title>Skill Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Class feature cards ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      width: 100%;
+      max-width: 900px;
+      padding: 0 20px;
+      margin-bottom: 10px;
+    }
+    .feature-card {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 20px 22px;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Colored top accent line */
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-card.chat::before   { background: #22c55e; }
+    .feature-card.ann::before    { background: #facc15; }
+    .feature-card.events::before { background: #a855f7; }
+    .feature-card.hw::before     { background: #f97316; }
+    .feature-card.lb::before     { background: #38bdf8; }
+
+    /* Per-color hover states */
+    .feature-card.chat:hover   { background: rgba(34,197,94,0.06);   border-color: rgba(34,197,94,0.3);   box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 4px 20px rgba(34,197,94,0.08); }
+    .feature-card.ann:hover    { background: rgba(250,204,21,0.06);  border-color: rgba(250,204,21,0.3);  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 4px 20px rgba(250,204,21,0.08); }
+    .feature-card.events:hover { background: rgba(168,85,247,0.06);  border-color: rgba(168,85,247,0.3);  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 4px 20px rgba(168,85,247,0.08); }
+    .feature-card.hw:hover     { background: rgba(249,115,22,0.06);  border-color: rgba(249,115,22,0.3);  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 4px 20px rgba(249,115,22,0.08); }
+    .feature-card.lb:hover     { background: rgba(56,189,248,0.06);  border-color: rgba(56,189,248,0.3);  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 4px 20px rgba(56,189,248,0.08); }
+    .feature-card:hover { transform: translateY(-2px); }
+
+    .feature-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-style: normal;
+    }
+    .feature-body { flex: 1; min-width: 0; }
+    .feature-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+    .feature-desc {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .feature-card.chat   .feature-icon { background: rgba(34,197,94,0.15);  color: #22c55e; }
+    .feature-card.ann    .feature-icon { background: rgba(250,204,21,0.15);  color: #facc15; }
+    .feature-card.events .feature-icon { background: rgba(168,85,247,0.15);  color: #a855f7; }
+    .feature-card.hw     .feature-icon { background: rgba(249,115,22,0.15);  color: #f97316; }
+    .feature-card.lb     .feature-icon { background: rgba(56,189,248,0.15);  color: #38bdf8; }
+
+    /* ── Live badge ── */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: #22c55e;
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.25);
+      border-radius: 4px;
+      padding: 2px 7px;
+      margin-left: 8px;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+    }
+    .live-dot {
+      width: 5px; height: 5px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: livePulse 1.8s ease-in-out infinite;
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    /* ── Section divider ── */
+    .section-label {
+      width: 100%;
+      max-width: 900px;
+      padding: 28px 20px 12px;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: #334155;
+      font-weight: 600;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .section-label::before,
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to var(--dir, right), transparent, rgba(255,255,255,0.07));
+    }
+    .section-label::before { --dir: right; }
+    .section-label::after  { --dir: left; }
+
+    /* ── Games carousel ── */
+    .games-carousel-wrap {
+      width: 100%;
+      max-width: 900px;
+      padding: 0 0 40px;
+      overflow: hidden;
+      position: relative;
+    }
+    /* Fade edges */
+    .games-carousel-wrap::before,
+    .games-carousel-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 40px;
+      width: 60px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .games-carousel-wrap::before {
+      left: 0;
+      background: linear-gradient(to right, #0d1628, transparent);
+    }
+    .games-carousel-wrap::after {
+      right: 0;
+      background: linear-gradient(to left, #0d1628, transparent);
+    }
+    .games-carousel-track {
+      display: flex;
+      gap: 10px;
+      animation: carouselScroll 28s linear infinite;
+      width: max-content;
+      padding: 4px 2px;
+    }
+    .games-carousel-track:hover { animation-play-state: paused; }
+    @keyframes carouselScroll {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .game-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 0;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      width: 200px;
+      flex-shrink: 0;
+    }
+    .game-card:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .game-card-thumb {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: contain;
+      object-position: center;
+      flex-shrink: 0;
+      display: block;
+      background: #0a1120;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+    .game-card-body {
+      padding: 8px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .game-card-eyebrow {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #475569;
+      font-weight: 600;
+    }
+    .game-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+
+    @media (max-width: 600px) {
+      .feature-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Scroll animations ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Page fade-in ── */
+    body { animation: pageFade 0.35s ease both; }
+    @keyframes pageFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Hero glow ── */
+    .page-header {
+      position: relative;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: 60%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 560px; height: 280px;
+      background: radial-gradient(ellipse at center, rgba(0,245,255,0.055) 0%, transparent 68%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .page-header > * { position: relative; z-index: 1; }
+    /* Gradient h1 */
+    .page-header h1 {
+      background: linear-gradient(135deg, #f1f5f9 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Button press ── */
+    .feature-card:active { transform: scale(0.98); }
+    .game-card:active    { transform: scale(0.97); }
+
+    /* ── CSS gradient thumb (cards with no image) ── */
+    .game-card-thumb-css {
+      width: 100%;
+      aspect-ratio: 16/9;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      background: #0a1120;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+  </style>
 </head>
 <body>
 
   <ul class="menu">
     <li><a href="#" class="active">Homepage</a></li>
-    <li><a href="about/index.html">About</a></li>
   </ul>
 
   <div class="page-header">
     <div class="eyebrow">SKILL HUB</div>
-    <h1>Test your limits.</h1>
-    <p>A collection of challenges built to sharpen your speed, accuracy, and problem-solving. Pick a challenge and see how far you can go.</p>
+    <h1>Your class, in one place.</h1>
+    <p>Stay on top of announcements, events, homework, and chat with your classmates — plus a few games to take a break.</p>
   </div>
 
-  <div class="card-grid">
-
-    <a class="card" href="typing/index.html">
-      <div class="card-eyebrow">SPEED</div>
-      <div class="card-title">Typing Simulator</div>
-      <div class="card-desc">Race against the clock. Improve your WPM and accuracy through focused practice and real-time feedback.</div>
-      <div class="card-tags">
-        <span class="card-tag">speed</span>
-        <span class="card-tag">accuracy</span>
-        <span class="card-tag">ranking</span>
+  <!-- Class features — primary -->
+  <div class="feature-grid">
+    <a class="feature-card chat" href="chat/index.html">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="feature-body">
+        <div class="feature-title">Chat <span class="live-badge"><span class="live-dot"></span>LIVE</span></div>
+        <div class="feature-desc">Message your classmates and teachers in real time. <span id="online-count" style="color:#4ade80;font-size:11px;font-weight:600"></span></div>
       </div>
     </a>
-
-    <a class="card" href="typerace/index.html">
-      <div class="card-eyebrow">MULTIPLAYER</div>
-      <div class="card-title">Type Race</div>
-      <div class="card-desc">Go head-to-head against others in real-time typing races. First to finish wins.</div>
-      <div class="card-tags">
-        <span class="card-tag">multiplayer</span>
-        <span class="card-tag">speed</span>
-        <span class="card-tag">racing</span>
+    <a class="feature-card ann" href="announcements/index.html">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div class="feature-body">
+        <div class="feature-title">Announcements</div>
+        <div class="feature-desc">Important notices and updates from the class admin.</div>
       </div>
     </a>
-
-    <a class="card" href="cps/index.html">
-      <div class="card-eyebrow">SPEED</div>
-      <div class="card-title">CPS Test</div>
-      <div class="card-desc">How fast can you click? Test your clicks per second over different time intervals and track your best score.</div>
-      <div class="card-tags">
-        <span class="card-tag">clicking</span>
-        <span class="card-tag">speed</span>
-        <span class="card-tag">ranking</span>
+    <a class="feature-card events" href="events/index.html">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="feature-body">
+        <div class="feature-title">Events</div>
+        <div class="feature-desc">Upcoming deadlines, activities, and class events.</div>
       </div>
     </a>
-
-    <a class="card" href="piano/index.html">
-      <div class="card-eyebrow">RHYTHM</div>
-      <div class="card-title">Piano Tiles</div>
-      <div class="card-desc">Tap the falling tiles in time with the music. Miss one and it's over — how long can you last?</div>
-      <div class="card-tags">
-        <span class="card-tag">rhythm</span>
-        <span class="card-tag">reflex</span>
-        <span class="card-tag">music</span>
+    <a class="feature-card hw" href="homework/index.html">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div class="feature-body">
+        <div class="feature-title">Homework</div>
+        <div class="feature-desc">Upload and download homework files and worksheets.</div>
       </div>
     </a>
-
-    <a class="card" href="clicker/index.html">
-      <div class="card-eyebrow">IDLE</div>
-      <div class="card-title">Cookie Clicker</div>
-      <div class="card-desc">Click your way to billions. Buy upgrades, automate production, and scale your cookie empire.</div>
-      <div class="card-tags">
-        <span class="card-tag">idle</span>
-        <span class="card-tag">upgrades</span>
-        <span class="card-tag">progression</span>
+    <a class="feature-card lb" href="leaderboard/index.html" style="grid-column: 1 / -1">
+      <div class="feature-icon">🏆</div>
+      <div class="feature-body">
+        <div class="feature-title">Leaderboard</div>
+        <div class="feature-desc">Top scores across all games — typing, CPS, clicker. See where you rank.</div>
       </div>
     </a>
+  </div>
 
-    <a class="card" href="slushie/index.html">
-      <div class="card-eyebrow">ARCADE</div>
-      <div class="card-title">Slushie Game</div>
-      <div class="card-desc">Mix and serve slushies as fast as you can. Keep up with the orders before the queue piles up.</div>
-      <div class="card-tags">
-        <span class="card-tag">arcade</span>
-        <span class="card-tag">reflex</span>
-        <span class="card-tag">casual</span>
-      </div>
-    </a>
-
-    <a class="card" href="ctf/index.html">
-      <div class="card-eyebrow">HACKING</div>
-      <div class="card-title">CTF Challenges</div>
-      <div class="card-desc">Find flags hidden in source code, cookies, headers, and encoded data. Logic and curiosity required.</div>
-      <div class="card-tags">
-        <span class="card-tag">ctf</span>
-        <span class="card-tag">devtools</span>
-        <span class="card-tag">crypto</span>
-        <span class="card-tag">jwt</span>
-      </div>
-    </a>
-
-    <a class="card" href="minecraft/index.html">
-      <div class="card-eyebrow">3D</div>
-      <div class="card-title">Minecraft 3D</div>
-      <div class="card-desc">A browser-based 3D block world. Mine, place, and explore — no install required.</div>
-      <div class="card-tags">
-        <span class="card-tag">3d</span>
-        <span class="card-tag">building</span>
-        <span class="card-tag">sandbox</span>
-      </div>
-    </a>
-
-    <a class="card" href="math_game/index.html">
-      <div class="card-eyebrow">COMING SOON</div>
-      <div class="card-title">Math Game</div>
-      <div class="card-desc">A fast-paced math challenge is in the works. Stay sharp.</div>
-      <div class="card-tags">
-        <span class="card-tag">math</span>
-        <span class="card-tag">soon</span>
-      </div>
-    </a>
-
+  <!-- Games — secondary -->
+  <div class="section-label">GAMES &amp; CHALLENGES</div>
+  <div class="games-carousel-wrap">
+    <div class="games-carousel-track" id="carousel-track">
+      <a class="game-card" href="typing/index.html">
+        <img class="game-card-thumb" src="assets/typing.png" alt="Typing Simulator">
+        <div class="game-card-body"><div class="game-card-eyebrow">SPEED</div><div class="game-card-title">Typing Simulator</div></div>
+      </a>
+      <a class="game-card" href="typerace/index.html">
+        <div class="game-card-thumb-css" style="background:linear-gradient(135deg,#0a1120 0%,#0f1e38 100%)">
+          <svg width="44" height="28" viewBox="0 0 44 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.35">
+            <rect x="1" y="1" width="6" height="6" rx="1.5" fill="#60a5fa"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="#60a5fa"/><rect x="17" y="1" width="6" height="6" rx="1.5" fill="#60a5fa"/><rect x="25" y="1" width="6" height="6" rx="1.5" fill="#60a5fa"/><rect x="33" y="1" width="10" height="6" rx="1.5" fill="#60a5fa"/>
+            <rect x="1" y="11" width="10" height="6" rx="1.5" fill="#818cf8"/><rect x="13" y="11" width="6" height="6" rx="1.5" fill="#818cf8"/><rect x="21" y="11" width="6" height="6" rx="1.5" fill="#818cf8"/><rect x="29" y="11" width="14" height="6" rx="1.5" fill="#818cf8"/>
+            <rect x="5" y="21" width="34" height="6" rx="1.5" fill="#a78bfa"/>
+          </svg>
+        </div>
+        <div class="game-card-body"><div class="game-card-eyebrow">MULTIPLAYER</div><div class="game-card-title">Type Race</div></div>
+      </a>
+      <a class="game-card" href="cps/index.html">
+        <img class="game-card-thumb" src="assets/cps.png" alt="CPS Test">
+        <div class="game-card-body"><div class="game-card-eyebrow">SPEED</div><div class="game-card-title">CPS Test</div></div>
+      </a>
+      <a class="game-card" href="piano/index.html">
+        <img class="game-card-thumb" src="assets/piano.png" alt="Piano Tiles">
+        <div class="game-card-body"><div class="game-card-eyebrow">RHYTHM</div><div class="game-card-title">Piano Tiles</div></div>
+      </a>
+      <a class="game-card" href="clicker/index.html">
+        <img class="game-card-thumb" src="assets/clicker.png" alt="Cookie Clicker">
+        <div class="game-card-body"><div class="game-card-eyebrow">IDLE</div><div class="game-card-title">Cookie Clicker</div></div>
+      </a>
+      <a class="game-card" href="slushie/index.html">
+        <img class="game-card-thumb" src="assets/slushie.png" alt="Slushie Game">
+        <div class="game-card-body"><div class="game-card-eyebrow">ARCADE</div><div class="game-card-title">Slushie Game</div></div>
+      </a>
+      <a class="game-card" href="ctf/index.html">
+        <img class="game-card-thumb" src="assets/ctf.png" alt="CTF Challenges">
+        <div class="game-card-body"><div class="game-card-eyebrow">HACKING</div><div class="game-card-title">CTF Challenges</div></div>
+      </a>
+      <a class="game-card" href="minecraft/index.html">
+        <img class="game-card-thumb" src="assets/minecraft.png" alt="Minecraft 3D">
+        <div class="game-card-body"><div class="game-card-eyebrow">3D</div><div class="game-card-title">Minecraft 3D</div></div>
+      </a>
+      <a class="game-card" href="math_game/index.html">
+        <img class="game-card-thumb" src="assets/math.png" alt="Math Game">
+        <div class="game-card-body"><div class="game-card-eyebrow">COMING SOON</div><div class="game-card-title">Math Game</div></div>
+      </a>
+      <a class="game-card" href="infinite/index.html">
+        <div class="game-card-thumb-css" style="background:linear-gradient(135deg,#0a1120 0%,#0f172a 100%)">✨</div>
+        <div class="game-card-body"><div class="game-card-eyebrow">AI</div><div class="game-card-title">Infinite Craft</div></div>
+      </a>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="auth-guard.js"></script>
   <script src="menu.js"></script>
+  <script>
+    // Scroll reveal for feature cards
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08 });
+
+    document.querySelectorAll('.feature-card, .section-label').forEach((el, i) => {
+      el.classList.add('reveal');
+      el.style.transitionDelay = (i * 60) + 'ms';
+      observer.observe(el);
+    });
+
+    // Online count on chat card
+    (async () => {
+      // Remove online count — last_seen only updates every 30s so real-time count isn't reliable
+      const el = document.getElementById('online-count');
+      if (el) el.remove();
+    })();
+
+    // Duplicate carousel cards for seamless infinite loop
+    const track = document.getElementById('carousel-track');
+    const clone = track.innerHTML;
+    track.innerHTML += clone;
+  </script>
 </body>
 </html>

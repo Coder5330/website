@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Events — Skill Hub</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../announcements/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+  </ul>
+
+  <div class="page-wrap">
+    <div class="page-eyebrow" style="color:#a855f7">EVENTS</div>
+    <h1 class="page-title">Events</h1>
+
+    <div id="compose-wrap" style="display:none" class="compose-box">
+      <input id="ev-title" type="text" placeholder="Event title" maxlength="100">
+      <input id="ev-date" type="datetime-local">
+      <textarea id="ev-content" placeholder="Event details…" maxlength="2000" rows="4"></textarea>
+      <div class="compose-row">
+        <button id="ev-post-btn" onclick="postEvent()">Post</button>
+        <span id="ev-st" class="field-status"></span>
+      </div>
+    </div>
+
+    <div id="ev-list"><p class="muted">Loading…</p></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

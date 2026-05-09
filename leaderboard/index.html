@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Leaderboard — Skill Hub</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+  </ul>
+
+  <div class="page-wrap">
+    <div class="page-eyebrow">RANKINGS</div>
+    <h1 class="page-title">Leaderboard</h1>
+
+    <div class="lb-tabs">
+      <button class="lb-tab active" data-game="typing">⌨️ Typing</button>
+      <button class="lb-tab" data-game="cps">🖱️ CPS</button>
+      <button class="lb-tab" data-game="clicker">🍪 Clicker</button>
+    </div>
+
+    <!-- CPS duration sub-tabs (only visible when CPS tab active) -->
+    <div id="cps-subtabs" class="cps-subtabs" style="display:none">
+      <button class="cps-sub active" data-dur="10">10s</button>
+      <button class="cps-sub" data-dur="30">30s</button>
+      <button class="cps-sub" data-dur="5">5s</button>
+      <button class="cps-sub" data-dur="2">2s</button>
+      <button class="cps-sub" data-dur="1">1s</button>
+      <button class="cps-sub" data-dur="60">60s</button>
+      <button class="cps-sub" data-dur="100">100s</button>
+    </div>
+
+    <div id="lb-content">
+      <div class="lb-skeleton">
+        ${[...Array(8)].map(() => `<div class="lb-sk-row"><div class="lb-sk-rank"></div><div class="lb-sk-avatar"></div><div class="lb-sk-name"></div><div class="lb-sk-score"></div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

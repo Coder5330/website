@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Chat — Skill Hub</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+  </ul>
+
+  <div id="chat-app">
+    <div id="sidebar">
+      <div id="sidebar-top">
+        <div class="sidebar-heading">Chats</div>
+        <button id="new-chat-btn" onclick="openNewChatModal()" title="New chat">✏️</button>
+      </div>
+      <div id="conv-list">
+        <div class="conv-item active" id="conv-main" onclick="openConv('00000000-0000-0000-0000-000000000001')">
+          <div class="conv-avatar" style="background:#3b82f6">GC</div>
+          <div class="conv-info">
+            <div class="conv-name">Main Chat</div>
+            <div class="conv-preview" id="main-preview">Everyone</div>
+          </div>
+        </div>
+        <div id="private-convs"></div>
+      </div>
+    </div>
+
+    <div id="main-panel">
+      <div id="conv-header">
+        <div id="conv-header-left">
+          <div id="conv-title">Main Chat</div>
+          <div id="conv-subtitle">Everyone</div>
+        </div>
+        <div id="msg-search-wrap">
+          <input id="msg-search" type="text" placeholder="Search…" autocomplete="off">
+        </div>
+      </div>
+      <div id="messages-area"></div>
+      <div id="typing-indicator"></div>
+      <div id="reply-bar" style="display:none">
+        <div id="reply-bar-inner">
+          <span style="color:#86efac;font-size:11px;font-weight:600" id="reply-bar-sender"></span>
+          <span id="reply-bar-text"></span>
+        </div>
+        <button id="reply-cancel-btn" onclick="cancelReply()">✕</button>
+      </div>
+      <div id="input-bar">
+        <input id="msg-input" type="text" placeholder="Message…" maxlength="500">
+        <button id="send-btn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New / edit chat overlay -->
+  <div id="chat-modal-overlay" style="display:none">
+    <div id="chat-modal">
+      <div id="chat-modal-header">
+        <div id="chat-modal-title">New Chat</div>
+        <button id="chat-modal-close" onclick="closeNewChatModal()">✕</button>
+      </div>
+      <input id="chat-name-input" type="text" placeholder="Chat name (optional)" maxlength="60" autocomplete="off">
+      <div id="selected-users"></div>
+      <div id="chat-user-search-wrap">
+        <input id="chat-search-input" type="text" placeholder="Search people to add…" autocomplete="off">
+        <div id="chat-search-results"></div>
+      </div>
+      <button id="chat-modal-submit" onclick="submitChatModal()">Create Chat</button>
+    </div>
+  </div>
+
+  <!-- Right-click context menu -->
+  <div id="msg-ctx-menu">
+    <div class="ctx-item" id="ctx-react"  onclick="ctxReact()">😀&nbsp; React</div>
+    <div class="ctx-item" id="ctx-reply"  onclick="ctxReply()">↩&nbsp; Reply</div>
+    <div class="ctx-item" id="ctx-copy"   onclick="ctxCopy()">📋&nbsp; Copy</div>
+    <div class="ctx-item" id="ctx-edit"   onclick="ctxEdit()">✏️&nbsp; Edit</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item ctx-danger" id="ctx-delete" onclick="ctxDelete()">🗑&nbsp; Delete</div>
+  </div>
+
+  <!-- Emoji reaction picker -->
+  <div id="emoji-picker">
+    <span onclick="pickEmoji('👍')">👍</span>
+    <span onclick="pickEmoji('❤️')">❤️</span>
+    <span onclick="pickEmoji('😂')">😂</span>
+    <span onclick="pickEmoji('😮')">😮</span>
+    <span onclick="pickEmoji('😢')">😢</span>
+    <span onclick="pickEmoji('🔥')">🔥</span>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

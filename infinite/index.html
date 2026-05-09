@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Infinite Craft — Skill Hub</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+  </ul>
+
+  <div id="ic-wrap">
+
+    <!-- Sidebar: discovered elements -->
+    <div id="ic-sidebar">
+      <div id="ic-sidebar-head">
+        <div id="ic-count">4 elements</div>
+        <input id="ic-search" type="text" placeholder="Search…" autocomplete="off">
+      </div>
+      <div id="ic-elem-list"></div>
+    </div>
+
+    <!-- Canvas -->
+    <div id="ic-canvas">
+      <div id="ic-hint">Click an element to place it, then drag two together to combine</div>
+    </div>
+
+  </div>
+
+  <!-- Combining overlay (shown while loading) -->
+  <div id="ic-loading" style="display:none">
+    <div class="ic-spinner"></div>
+  </div>
+
+  <!-- Toast -->
+  <div id="ic-toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

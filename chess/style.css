@@ -1,0 +1,425 @@
+/* ── Chess App Layout ── */
+.chess-app {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1200px;
+  padding: 12px 16px 24px;
+  gap: 20px;
+  box-sizing: border-box;
+  /* Override global body centering for this layout */
+  align-self: stretch;
+}
+
+/* ── Sidebar ── */
+.chess-sidebar {
+  width: 220px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mode-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mode-btn {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #e5e7eb;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+
+.mode-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, rgba(99,102,241,0.4), rgba(139,92,246,0.4));
+  border-color: rgba(139,92,246,0.7);
+  color: #c4b5fd;
+  box-shadow: 0 0 10px rgba(139,92,246,0.2);
+}
+
+.mode-sub {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* ── Difficulty Level Selector ── */
+.level-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.level-heading {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  padding: 0 2px;
+}
+
+.level-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.level-btn {
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.3;
+}
+
+.level-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.level-btn.active {
+  background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(5,150,105,0.3));
+  border-color: rgba(16,185,129,0.6);
+  color: #6ee7b7;
+  box-shadow: 0 0 8px rgba(16,185,129,0.15);
+}
+
+/* ── Game Status ── */
+.game-status {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 60px;
+}
+
+.status-turn {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 4px;
+}
+
+.status-msg {
+  font-size: 12px;
+  color: #fbbf24;
+  min-height: 18px;
+}
+
+.status-online {
+  font-size: 11px;
+  color: #6ee7b7;
+  margin-top: 4px;
+}
+
+/* ── Online controls ── */
+.online-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.online-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(59,130,246,0.2);
+  border: 1px solid rgba(59,130,246,0.4);
+  border-radius: 6px;
+  color: #93c5fd;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.online-btn:hover {
+  background: rgba(59,130,246,0.35);
+  border-color: rgba(59,130,246,0.6);
+}
+
+.online-join {
+  display: flex;
+  gap: 6px;
+}
+
+.online-join input {
+  flex: 1;
+  padding: 7px 8px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: #e5e7eb;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  outline: none;
+  width: 0; /* let flex handle sizing */
+}
+
+.online-join input:focus {
+  border-color: rgba(59,130,246,0.5);
+}
+
+.online-join .online-btn {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.room-info {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  min-height: 16px;
+}
+
+.room-code {
+  font-size: 20px;
+  font-weight: 700;
+  color: #c4b5fd;
+  letter-spacing: 4px;
+  display: block;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #a78bfa;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Stop button ── */
+.stop-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(239,68,68,0.2);
+  border: 1px solid rgba(239,68,68,0.4);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.stop-btn:hover {
+  background: rgba(239,68,68,0.35);
+}
+
+/* ── Main Board Area ── */
+.chess-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.board-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* ── Chess Board ── */
+.chess-board {
+  /* Responsive size: fill available space minus sidebar */
+  --board-size: min(calc(100vw - 300px), calc(100vh - 180px));
+  width: var(--board-size);
+  height: var(--board-size);
+  min-width: 240px;
+  min-height: 240px;
+  max-width: 640px;
+  max-height: 640px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  user-select: none;
+}
+
+/* ── Board Cells ── */
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: default;
+  font-size: clamp(1.4rem, 5vmin, 2.8rem);
+  line-height: 1;
+  transition: background-color 0.1s;
+}
+
+.cell.light { background-color: #f0d9b5; }
+.cell.dark  { background-color: #b58863; }
+
+/* Piece cursor */
+.cell.has-piece { cursor: pointer; }
+
+/* Selected piece */
+.cell.selected {
+  background-color: rgba(20, 85, 255, 0.5) !important;
+}
+
+/* Last move highlight */
+.cell.last-move {
+  background-color: rgba(255, 255, 0, 0.2);
+}
+.cell.last-move.light { background-color: rgba(255, 255, 0, 0.35); }
+.cell.last-move.dark  { background-color: rgba(255, 255, 0, 0.25); }
+
+/* Legal move dot */
+.cell.legal-move::after {
+  content: '';
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: rgba(20, 85, 255, 0.35);
+  pointer-events: none;
+}
+
+/* Legal move on occupied square — ring instead of dot */
+.cell.legal-capture::after {
+  content: '';
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background: transparent;
+  border: 3px solid rgba(20, 85, 255, 0.5);
+  pointer-events: none;
+}
+
+.cell.legal-move,
+.cell.legal-capture {
+  cursor: pointer;
+}
+
+/* Piece character */
+.piece {
+  pointer-events: none;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* ── Board Controls ── */
+.board-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.new-game-btn {
+  padding: 9px 28px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(139,92,246,0.35));
+  border: 1px solid rgba(139,92,246,0.5);
+  border-radius: 8px;
+  color: #c4b5fd;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.new-game-btn:hover {
+  background: linear-gradient(135deg, rgba(99,102,241,0.55), rgba(139,92,246,0.55));
+  box-shadow: 0 0 12px rgba(139,92,246,0.25);
+}
+
+/* ── Captured Pieces ── */
+.captured-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-self: flex-start;
+  width: 100%;
+  max-width: 640px;
+}
+
+.captured-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.captured-label {
+  color: #94a3b8;
+  min-width: 110px;
+  flex-shrink: 0;
+}
+
+.captured-pieces {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .chess-app {
+    flex-direction: column;
+    padding: 8px;
+    gap: 12px;
+  }
+
+  .chess-sidebar {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .mode-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mode-btn {
+    flex: 1 1 calc(50% - 3px);
+    font-size: 10px;
+    padding: 8px 6px;
+  }
+
+  .chess-board {
+    --board-size: min(calc(100vw - 16px), calc(100vh - 300px));
+  }
+}

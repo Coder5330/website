@@ -34,12 +34,13 @@ h1 {
 .upgrades {
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow-y: scroll;
 }
 
 .upgrades::-webkit-scrollbar { width: 4px; }
 .upgrades::-webkit-scrollbar-track { background: transparent; }
 .upgrades::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 2px; }
+.upgrades::-webkit-scrollbar-thumb:hover { background: #2d5a8f; }
 
 .title {
     font-size: 32px;
@@ -52,7 +53,7 @@ h1 {
     height: calc(100vh - 80px);
 }
 
-button {
+.upgrades button, #cookie {
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
     border-radius: 10px;
@@ -64,37 +65,37 @@ button {
     border: 1px solid transparent;
 }
 
-button.unaffordable {
+.upgrades button.unaffordable {
     background: #111827;
     color: #374151;
     border-color: #1f2937;
     cursor: not-allowed;
 }
 
-button.affordable {
+.upgrades button.affordable {
     background: linear-gradient(135deg, #1d4ed8, #4f46e5);
     color: #e5e7eb;
     border-color: rgba(99, 102, 241, 0.4);
     box-shadow: 0 0 8px rgba(79, 70, 229, 0.35);
 }
 
-button.affordable:hover {
+.upgrades button.affordable:hover {
     transform: translateY(-2px);
     box-shadow: 0 0 18px rgba(79, 70, 229, 0.55);
 }
 
-button.affordable:active {
+.upgrades button.affordable:active {
     transform: translateY(0px);
     box-shadow: 0 0 6px rgba(79, 70, 229, 0.3);
 }
 
-button.purchased {
+.upgrades button.purchased {
     background: linear-gradient(135deg, #059669, #10b981) !important;
     box-shadow: 0 0 22px rgba(16, 185, 129, 0.6) !important;
     color: #fff !important;
 }
 
-button.one-time-bought {
+.upgrades button.one-time-bought {
     background: linear-gradient(135deg, #1a3a2a, #0f2d1f) !important;
     color: #34d399 !important;
     border-color: rgba(52, 211, 153, 0.25) !important;

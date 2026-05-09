@@ -1,4 +1,12 @@
-// Clicker script with Supabase save/load
+// Clicker script — server-authoritative score via delta saves
+
+async function banSelf() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  await sb.from('blacklist').insert({ email: session.user.email }).maybeSingle();
+  await sb.auth.signOut();
+  window.location.href = '/auth/index.html?banned=1';
+}
 
 function getEffectiveCost(up) {
   const n = buyCounts[up.id] || 0;
@@ -7,8 +15,8 @@ function getEffectiveCost(up) {
 
 function updateDisplay() {
   scoreDisplay.textContent = formatNumber(Math.floor(score));
-  gpcDisplay.textContent = formatNumber(Math.floor(gpc));
-  gpsDisplay.textContent = formatNumber(Math.floor(gps * gpsMultiplier));
+  gpcDisplay.textContent = formatNumber(Math.floor(gpc * gpcMultiplier * _staffMult));
+  gpsDisplay.textContent = formatNumber(Math.floor(gps * gpsMultiplier * _staffMult));
   updateButtons();
 }
 
@@ -63,32 +71,47 @@ async function getSession() {
   return session;
 }
 
-function buildRow(session) {
-  return {
-    player_id: session.user.id,
-    game: 'clicker',
-    payload: {
-      score: Math.floor(score),
-      gpc: Math.floor(gpc),
-      gps: Math.floor(gps),
-      gpsm: gpsMultiplier,
-      pm: [...purchasedMults],
-      bc: buyCounts
+// ── Delta trackers — only these are sent to the server ─────────────────────
+let _clicks = 0;           // clicks accumulated since last save
+let _pendingPurchases = []; // upgrade IDs bought since last save
+
+function _syncState(state) {
+  // Overwrite local vars with server-authoritative values
+  score         = state.score;
+  gpc           = state.gpc;
+  gps           = state.gps;
+  gpsMultiplier = state.gpsm;
+  gpcMultiplier = state.gpcm;
+  Object.assign(buyCounts, state.bc || {});
+  purchasedMults.clear();
+  (state.pm || []).forEach(id => {
+    purchasedMults.add(id);
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('one-time-bought');
+      const costEl = btn.querySelectorAll('p')[1];
+      if (costEl) costEl.textContent = '✓ purchased';
     }
-  };
+  });
+  updateDisplay();
 }
 
+// On page close: fire-and-forget the remaining deltas via keepalive fetch
 function saveGameSync() {
   if (!cachedSession || !gameLoaded) return;
-  fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+  const clicks    = _clicks;
+  const purchases = [..._pendingPurchases];
+  _clicks = 0;
+  _pendingPurchases = [];
+  fetch(`${SUPABASE_URL}/rest/v1/rpc/save_clicker_score`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'apikey': SUPABASE_ANON,
       'Authorization': 'Bearer ' + cachedSession.access_token,
-      'Prefer': 'resolution=merge-duplicates'
     },
-    body: JSON.stringify(buildRow(cachedSession)),
+    body: JSON.stringify({ p_clicks: clicks, p_purchases: purchases }),
     keepalive: true
   });
 }
@@ -96,21 +119,42 @@ function saveGameSync() {
 async function saveGame() {
   const session = await getSession();
   if (!session) return;
+
+  // Snapshot and clear deltas before the async call so rapid clicks/purchases
+  // that arrive mid-request are counted in the next save, not double-counted.
+  const clicks    = _clicks;
+  const purchases = [..._pendingPurchases];
+  _clicks = 0;
+  _pendingPurchases = [];
+
   const status = document.getElementById('save-status');
   status.textContent = '⬤ saving...';
   status.className = 'saving';
-  const row = buildRow(session);
-  const { data: saved, error } = await sb.rpc('save_clicker_score', {
-    p_player_id: session.user.id,
-    p_payload: row.payload
+
+  const { data: state, error } = await sb.rpc('save_clicker_score', {
+    p_clicks: clicks,
+    p_purchases: purchases
   });
+
   if (error) {
+    // Put deltas back so they aren't lost
+    _clicks += clicks;
+    _pendingPurchases = [...purchases, ..._pendingPurchases];
     status.textContent = '⬤ error';
     status.className = '';
-    console.error('save error:', error);
     return;
   }
-  if (saved === false) { cheaterBlocked = true; alert('STTTOPPP CHEATTTING'); status.textContent = '⛔ cheater'; status.className = ''; return; }
+
+  if (!state || state.banned) {
+    cheaterBlocked = true;
+    alert('STTTOPPP CHEATTTING');
+    status.textContent = '⛔ cheater';
+    status.className = '';
+    banSelf();
+    return;
+  }
+
+  _syncState(state);
   status.textContent = '⬤ saved';
   status.className = 'saved';
   setTimeout(() => { status.textContent = '⬤ saved'; status.className = ''; }, 2000);
@@ -136,20 +180,14 @@ async function loadGame() {
     return;
   }
   if (data?.payload) {
-    score         = data.payload.score || 0;
-    gpc           = data.payload.gpc   || 1;
-    gps           = data.payload.gps   || 0;
-    gpsMultiplier = data.payload.gpsm  || 1;
-    Object.assign(buyCounts, data.payload.bc || {});
-    (data.payload.pm || []).forEach(id => {
-      purchasedMults.add(id);
-      const btn = document.getElementById(id);
-      if (btn) {
-        btn.disabled = true;
-        btn.classList.add('one-time-bought');
-        const costEl = btn.querySelectorAll('p')[1];
-        if (costEl) costEl.textContent = '✓ purchased';
-      }
+    _syncState({
+      score: data.payload.score || 0,
+      gpc:   data.payload.gpc   || 1,
+      gps:   data.payload.gps   || 0,
+      gpsm:  data.payload.gpsm  || 1,
+      gpcm:  data.payload.gpcm  || 1,
+      bc:    data.payload.bc    || {},
+      pm:    data.payload.pm    || [],
     });
   }
   gameLoaded = true;
@@ -160,9 +198,31 @@ let score = 0;
 let gps = 0;
 let gpc = 1;
 let gpsMultiplier = 1;
+let gpcMultiplier = 1;
+let _staffMult = 1; // display-only, never saved; server applies its own boost
 let cheaterBlocked = false;
 const purchasedMults = new Set();
 const buyCounts = {};
+
+// Autoclick detection
+const _clickLog = [];
+function _recordClick() {
+  const now = Date.now();
+  _clickLog.push(now);
+  while (_clickLog.length && now - _clickLog[0] > 2000) _clickLog.shift();
+
+  const lastSec = _clickLog.filter(t => now - t < 1000).length;
+  if (lastSec > 25) return true;
+
+  if (_clickLog.length >= 12) {
+    const recent = _clickLog.slice(-12);
+    const intervals = recent.slice(1).map((t, i) => t - recent[i]);
+    const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const variance = intervals.reduce((a, b) => a + (b - mean) ** 2, 0) / intervals.length;
+    if (variance < 8 && mean < 60) return true;
+  }
+  return false;
+}
 
 const scoreDisplay = document.getElementById('score');
 const gpcDisplay   = document.getElementById('gpc');
@@ -170,7 +230,6 @@ const gpsDisplay   = document.getElementById('gps');
 const cookie       = document.getElementById('cookie');
 
 const upgrades = [
-  // ── Existing ──────────────────────────────────────────────
   { id: 'up1',  type: 'gps', value: 0.25,        cost: 25 },
   { id: 'up2',  type: 'gpc', value: 1,            cost: 100 },
   { id: 'up3',  type: 'gpc', value: 10,           cost: 500 },
@@ -187,7 +246,6 @@ const upgrades = [
   { id: 'up14', type: 'gps', value: 10000,        cost: 160000000 },
   { id: 'up15', type: 'gpc', value: 10000000,     cost: 1000000000 },
   { id: 'up16', type: 'gps', value: 500000,       cost: 10000000000 },
-  // ── New additive ──────────────────────────────────────────
   { id: 'up17', type: 'gps', value: 10e6,         cost: 50e9 },
   { id: 'up18', type: 'gpc', value: 200e6,        cost: 200e9 },
   { id: 'up19', type: 'gps', value: 100e6,        cost: 1e12 },
@@ -196,7 +254,6 @@ const upgrades = [
   { id: 'up22', type: 'gpc', value: 20e9,         cost: 125e12 },
   { id: 'up23', type: 'gps', value: 10e9,         cost: 625e12 },
   { id: 'up24', type: 'gpc', value: 200e9,        cost: 3e15 },
-  // ── GPS multipliers (one-time only, no scaling) ───────────
   { id: 'up25', type: 'gpsMulti', value: 2,       cost: 20e15 },
   { id: 'up26', type: 'gpsMulti', value: 5,       cost: 200e15 },
   { id: 'up27', type: 'gpsMulti', value: 10,      cost: 2.5e18 },
@@ -207,17 +264,37 @@ const upgrades = [
 ];
 
 updateButtons();
-loadGame();
+loadGame().then(applyStaffBoost);
 
+async function applyStaffBoost() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data } = await sb.from('users').select('role').eq('id', session.user.id).single();
+  if (data?.role !== 'admin' && data?.role !== 'owner') return;
+
+  // Display hint only — actual 3× bonus is applied server-side in the RPC
+  _staffMult = 3;
+  updateDisplay();
+
+  const boostBtn = document.createElement('div');
+  boostBtn.id = 'staff-boost-btn';
+  boostBtn.innerHTML = '👑 Staff Boost active (3×)';
+  boostBtn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:rgba(250,204,21,0.15);border:1px solid rgba(250,204,21,0.3);border-radius:8px;color:#fde047;font-family:"JetBrains Mono",monospace;font-size:11px;padding:8px 14px;z-index:99;opacity:0.6;pointer-events:none';
+  document.body.appendChild(boostBtn);
+}
+
+// Click: increment delta counter, optimistically update local display
 cookie.addEventListener("click", () => {
   if (cheaterBlocked) return;
-  score += gpc;
+  if (_recordClick()) { cheaterBlocked = true; banSelf(); return; }
+  _clicks++;
+  score += gpc * gpcMultiplier * _staffMult; // optimistic — server corrects on next save
   updateDisplay();
 });
 
 cookie.addEventListener("click", (e) => {
   const popup = document.createElement("div");
-  popup.textContent = "+" + formatNumber(gpc);
+  popup.textContent = "+" + formatNumber(Math.floor(gpc * gpcMultiplier * _staffMult));
   popup.style.cssText = `
     position: fixed; left: ${e.clientX}px; top: ${e.clientY}px;
     font-size: 20px; font-weight: bold; color: #e5e7eb;
@@ -245,12 +322,14 @@ cookie.addEventListener("click", (e) => {
   }
 });
 
+// Purchase: queue ID as delta, optimistically update local display
 upgrades.forEach(up => {
   const button = document.getElementById(up.id);
   button.addEventListener("click", () => {
     if (up.type === 'gpsMulti' && purchasedMults.has(up.id)) return;
     const cost = up.type === 'gpsMulti' ? up.cost : getEffectiveCost(up);
     if (score < cost) return;
+    _pendingPurchases.push(up.id); // tell server about this purchase
     score -= cost;
     if (up.type === 'gps') {
       gps += up.value;
@@ -260,6 +339,7 @@ upgrades.forEach(up => {
       buyCounts[up.id] = (buyCounts[up.id] || 0) + 1;
     } else if (up.type === 'gpsMulti') {
       gpsMultiplier *= up.value;
+      gpcMultiplier *= up.value;
       purchasedMults.add(up.id);
       button.disabled = true;
     }
@@ -269,6 +349,6 @@ upgrades.forEach(up => {
   });
 });
 
-setInterval(() => { if (!cheaterBlocked) score += (gps * gpsMultiplier) / 60; }, 1000 / 60);
+setInterval(() => { if (!cheaterBlocked) score += (gps * gpsMultiplier * _staffMult) / 60; }, 1000 / 60);
 setInterval(updateDisplay, 100);
 setInterval(() => { if (gameLoaded) saveGame(); }, 1000);

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Homework — Skill Hub</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../announcements/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+  </ul>
+
+  <div class="page-wrap">
+    <div class="page-eyebrow" style="color:#10b981">HOMEWORK</div>
+    <h1 class="page-title">Homework</h1>
+
+    <div class="compose-box" style="border-color:rgba(16,185,129,0.2)">
+      <div id="drop-zone">
+        <div id="drop-label">📎 Click or drag a file to upload</div>
+        <div id="drop-sub">PDF, Word, PowerPoint, Excel, PNG, JPG, TXT · max 10MB</div>
+        <input id="file-input" type="file" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png,image/jpeg,text/plain">
+      </div>
+      <div id="upload-progress" style="display:none">
+        <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+        <span id="progress-label">Uploading…</span>
+      </div>
+      <span id="upload-st" class="field-status"></span>
+    </div>
+
+    <div id="hw-list"><p class="muted">Loading…</p></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

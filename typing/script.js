@@ -37,6 +37,105 @@ const wpmEl = document.getElementById("wpm");
 const accEl = document.getElementById("accuracy");
 const message1 = document.getElementById("message1");
 
+// ── WPM graph ──────────────────────────────────────────
+const graphCanvas = document.getElementById('wpm-graph');
+const gctx = graphCanvas.getContext('2d');
+const wpmHistory = [];   // [{t, wpm}, …]
+let lastGraphSec = -1;
+
+function drawGraph() {
+  // Match canvas pixel size to its CSS display size
+  const cssW = graphCanvas.clientWidth || 500;
+  const cssH = graphCanvas.clientHeight || 150;
+  if (graphCanvas.width !== cssW)  graphCanvas.width  = cssW;
+  if (graphCanvas.height !== cssH) graphCanvas.height = cssH;
+
+  const W = graphCanvas.width, H = graphCanvas.height;
+  const PAD = { top: 14, right: 14, bottom: 30, left: 36 };
+  gctx.clearRect(0, 0, W, H);
+
+  const pts = wpmHistory;
+  if (pts.length === 0) return;
+
+  const maxT = Math.max(pts[pts.length - 1].t, 5);
+  const maxW = Math.max(...pts.map(p => p.wpm), 40);
+  const yMax = Math.ceil(maxW / 20) * 20 + 20;
+
+  const toX = t => PAD.left + (t / maxT) * (W - PAD.left - PAD.right);
+  const toY = w => PAD.top  + (1 - w / yMax) * (H - PAD.top  - PAD.bottom);
+
+  // Grid lines + Y labels
+  gctx.lineWidth = 1;
+  gctx.font = '10px monospace';
+  gctx.textAlign = 'right';
+  for (let y = 0; y <= yMax; y += 20) {
+    const py = toY(y);
+    gctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    gctx.beginPath(); gctx.moveTo(PAD.left, py); gctx.lineTo(W - PAD.right, py); gctx.stroke();
+    gctx.fillStyle = 'rgba(255,255,255,0.3)';
+    gctx.fillText(y, PAD.left - 4, py + 3);
+  }
+
+  // Axes
+  gctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  gctx.beginPath();
+  gctx.moveTo(PAD.left, PAD.top);
+  gctx.lineTo(PAD.left, H - PAD.bottom);
+  gctx.lineTo(W - PAD.right, H - PAD.bottom);
+  gctx.stroke();
+
+  // X axis time labels
+  gctx.fillStyle = 'rgba(255,255,255,0.3)';
+  gctx.textAlign = 'center';
+  const step = maxT <= 20 ? 5 : maxT <= 60 ? 10 : 15;
+  for (let t = 0; t <= maxT; t += step) {
+    gctx.fillText(t + 's', toX(t), H - PAD.bottom + 14);
+  }
+
+  if (pts.length < 2) {
+    // Single dot
+    gctx.fillStyle = '#22c55e';
+    gctx.beginPath(); gctx.arc(toX(pts[0].t), toY(pts[0].wpm), 3, 0, Math.PI * 2); gctx.fill();
+    return;
+  }
+
+  // Filled area under curve
+  gctx.beginPath();
+  gctx.moveTo(toX(pts[0].t), toY(pts[0].wpm));
+  for (let i = 1; i < pts.length; i++) gctx.lineTo(toX(pts[i].t), toY(pts[i].wpm));
+  gctx.lineTo(toX(pts[pts.length - 1].t), H - PAD.bottom);
+  gctx.lineTo(toX(pts[0].t), H - PAD.bottom);
+  gctx.closePath();
+  gctx.fillStyle = 'rgba(34,197,94,0.10)';
+  gctx.fill();
+
+  // Line
+  gctx.beginPath();
+  gctx.moveTo(toX(pts[0].t), toY(pts[0].wpm));
+  for (let i = 1; i < pts.length; i++) gctx.lineTo(toX(pts[i].t), toY(pts[i].wpm));
+  gctx.strokeStyle = '#22c55e';
+  gctx.lineWidth = 2.5;
+  gctx.lineJoin = 'round';
+  gctx.lineCap = 'round';
+  gctx.stroke();
+
+  // Dots
+  gctx.fillStyle = '#22c55e';
+  for (const p of pts) {
+    gctx.beginPath();
+    gctx.arc(toX(p.t), toY(p.wpm), 3.5, 0, Math.PI * 2);
+    gctx.fill();
+  }
+
+  // Latest WPM label
+  const last = pts[pts.length - 1];
+  const lx = toX(last.t), ly = toY(last.wpm);
+  gctx.font = 'bold 11px monospace';
+  gctx.fillStyle = '#4ade80';
+  gctx.textAlign = lx > W - 60 ? 'right' : 'left';
+  gctx.fillText(last.wpm + ' wpm', lx + (lx > W - 60 ? -8 : 8), ly - 7);
+}
+
 const sentences = [
     "Typing is a skill that improves with patience and consistency. At first, it may feel slow and frustrating, but over time your fingers begin to remember where each key is located. Instead of looking at the keyboard, you learn to trust your muscle memory. The key is to focus on accuracy before speed, because speed naturally increases when mistakes are reduced.",
     "In a world full of distractions, maintaining focus has become more valuable than ever. Typing practice is not just about speed, but also about training your mind to stay engaged on a single task. When you concentrate fully, your typing becomes smoother and more consistent. This same focus can be applied to studying, working, and solving problems more effectively.",
@@ -75,6 +174,7 @@ document.getElementById("restart").addEventListener("click", () => {
 });
 
 function startTimer() {
+  graphCanvas.classList.add('active');
   timer = setInterval(() => {
     let elapsed = (Date.now() - startTime) / 1000;
     timeEl.textContent = elapsed.toFixed(1);
@@ -85,6 +185,14 @@ function startTimer() {
 
     wpmEl.textContent = wpm;
     accEl.textContent = accuracy;
+
+    // Record one data point per second for the graph
+    const sec = Math.floor(elapsed);
+    if (sec > lastGraphSec && elapsed > 0.5) {
+      lastGraphSec = sec;
+      wpmHistory.push({ t: sec, wpm });
+      drawGraph();
+    }
   }, 100);
 }
 
@@ -130,6 +238,12 @@ content.addEventListener("keydown", (e) => {
 
   if (index === spans.length) {
     clearInterval(timer);
+    // Final graph point
+    const elapsed = (Date.now() - startTime) / 1000;
+    const sec = Math.floor(elapsed);
+    if (sec > lastGraphSec) { wpmHistory.push({ t: sec, wpm }); }
+    drawGraph();
+
     message1.textContent = "Test finished!";
     const result = getRank(wpm, accuracy);
     document.getElementById("rank").textContent = "Your rank: " + result.rank;
@@ -141,20 +255,13 @@ content.addEventListener("keydown", (e) => {
 async function saveTypingScore() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return;
-  const { data } = await sb.from('scores')
-    .select('payload')
-    .eq('player_id', session.user.id)
-    .eq('game', 'typing')
-    .maybeSingle();
-  if (data?.payload?.wpm >= wpm) return;
   const status = document.getElementById('save-status');
   status.textContent = '⬤ saving...';
   status.className = 'saving';
-  const { error } = await sb.from('scores').upsert({
-    player_id: session.user.id,
-    game: 'typing',
-    payload: { wpm, accuracy }
-  }, { onConflict: 'player_id,game' });
+  const { error } = await sb.rpc('submit_score', {
+    p_game: 'typing',
+    p_payload: { wpm, accuracy }
+  });
   if (error) { console.error('save error:', error); status.textContent = '⬤ error'; status.className = ''; return; }
   status.textContent = '⬤ new best!';
   status.className = 'saved';

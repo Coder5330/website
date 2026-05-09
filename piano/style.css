@@ -103,7 +103,7 @@ kbd {
   font-family: monospace;
 }
 
-button {
+#app button {
   background: #2d8cf0;
   color: #fff;
   border: none;
@@ -115,7 +115,7 @@ button {
   transition: background 0.15s;
 }
 
-button:hover { background: #1a7ae0; }
+#app button:hover { background: #1a7ae0; }
 
 .credit {
   position: absolute;
@@ -186,16 +186,6 @@ button:hover { background: #1a7ae0; }
   background: linear-gradient(180deg, #2d8cf0, #1a5fb4);
 }
 
-#hitline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 110px;
-  height: 2px;
-  background: #2d8cf0;
-  box-shadow: 0 0 10px #2d8cf0;
-  z-index: 5;
-}
 
 #keyHints {
   position: absolute;

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feedback — Skill Hub</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .feedback-wrap {
+      width: 100%;
+      max-width: 560px;
+      padding: 0 20px 60px;
+    }
+    .feedback-box {
+      background: #131f35;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      padding: 28px 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .fb-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+    .fb-textarea {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      color: #e5e7eb;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 12px 14px;
+      resize: vertical;
+      min-height: 160px;
+      outline: none;
+      transition: border-color 0.15s;
+      box-sizing: border-box;
+    }
+    .fb-textarea:focus { border-color: rgba(0,245,255,0.35); }
+    .fb-textarea::placeholder { color: #334155; }
+    .fb-submit {
+      width: 100%;
+      background: rgba(0,245,255,0.1);
+      border: 1px solid rgba(0,245,255,0.3);
+      border-radius: 9px;
+      color: #00f5ff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 1px;
+      padding: 11px;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .fb-submit:hover  { background: rgba(0,245,255,0.18); }
+    .fb-submit:disabled { opacity: 0.45; cursor: default; }
+    .fb-msg {
+      font-size: 12px;
+      text-align: center;
+      min-height: 16px;
+      color: #f87171;
+    }
+    .fb-msg.ok { color: #34d399; }
+    .fb-hints {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .fb-hint {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.5;
+    }
+    .fb-hint-icon {
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+  </style>
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+  </ul>
+
+  <div class="feedback-wrap">
+    <div class="page-header" style="padding-bottom:1.5rem">
+      <div class="eyebrow">FEEDBACK</div>
+      <h1>Help us improve</h1>
+      <p>Got a bug, idea, or complaint? Send it directly to the developer.</p>
+    </div>
+
+    <div class="feedback-box">
+      <div class="fb-hints">
+        <div class="fb-hint"><span class="fb-hint-icon">🐛</span><span>Report a bug or broken feature</span></div>
+        <div class="fb-hint"><span class="fb-hint-icon">💡</span><span>Suggest a new feature or improvement</span></div>
+        <div class="fb-hint"><span class="fb-hint-icon">😤</span><span>Just complain (totally valid)</span></div>
+      </div>
+
+      <div>
+        <div class="fb-label" style="margin-bottom:8px">Your message</div>
+        <textarea class="fb-textarea" id="fb-input" placeholder="Type your feedback here…" maxlength="2000"></textarea>
+        <div style="text-align:right;font-size:10px;color:#334155;margin-top:4px"><span id="fb-count">0</span>/2000</div>
+      </div>
+
+      <button class="fb-submit" id="fb-btn" onclick="submitFeedback()">Send feedback</button>
+      <div class="fb-msg" id="fb-msg"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

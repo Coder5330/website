@@ -1,0 +1,85 @@
+#drop-zone {
+  border: 2px dashed rgba(16,185,129,0.3);
+  border-radius: 10px;
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+#drop-zone:hover, #drop-zone.over { border-color: rgba(16,185,129,0.6); background: rgba(16,185,129,0.05); }
+#drop-label { font-size: 14px; color: #94a3b8; margin-bottom: 6px; }
+#drop-sub { font-size: 11px; color: #475569; }
+#file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+#progress-bar-wrap {
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  height: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+#progress-bar {
+  height: 100%;
+  background: #10b981;
+  width: 0%;
+  transition: width 0.2s;
+}
+#progress-label { font-size: 11px; color: #475569; }
+
+.hw-file {
+  background: #131f35;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.hw-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.hw-info { flex: 1; min-width: 0; }
+.hw-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hw-meta { font-size: 11px; color: #475569; margin-top: 2px; }
+.hw-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.hw-btn {
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 6px;
+  color: #34d399;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.hw-btn:hover { background: rgba(16,185,129,0.2); }
+.hw-btn-del {
+  background: transparent;
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px;
+  color: #ef4444;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.hw-btn-del:hover { opacity: 1; background: rgba(239,68,68,0.1); }

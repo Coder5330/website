@@ -260,11 +260,11 @@ body {
   border: 2px solid rgba(255,255,255,0.2);
   border-radius: 12px;
   padding: 18px 22px;
-  max-width: 420px;
+  max-width: 680px;
   width: 96%;
   max-height: 88vh;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   box-sizing: border-box;
 }
 .inv-frame h2 { color: #ffe66d; font-size: 1.4rem; margin-bottom: 8px; }
@@ -349,3 +349,283 @@ body {
 }
 
 .inv-hint { margin-top: 12px; font-size: 0.78rem; opacity: 0.6; text-align: center; }
+
+/* ── Damage flash ── */
+#damageFlash {
+  position: absolute;
+  inset: 0;
+  background: rgba(200,0,0,0);
+  pointer-events: none;
+  z-index: 6;
+  transition: background 0.4s ease-out;
+}
+#damageFlash.hit {
+  background: rgba(200,0,0,0.45);
+  transition: none;
+}
+
+/* ── Death screen ── */
+#deathScreen {
+  position: absolute;
+  inset: 0;
+  background: rgba(100,0,0,0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+.death-msg {
+  font-size: 2.4rem;
+  color: #fff;
+  text-shadow: 0 0 20px #f00, 0 0 50px #800;
+  margin-bottom: 1.6rem;
+  letter-spacing: 1px;
+}
+#deathScreen button {
+  padding: 12px 30px;
+  font: bold 1rem 'Trebuchet MS', system-ui, sans-serif;
+  background: #ffe66d;
+  color: #1a1a2e;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+#deathScreen button:hover { transform: translateY(-2px); }
+
+/* ── Health / Hunger HUD ── */
+#healthHungerHud {
+  position: absolute;
+  bottom: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  z-index: 5;
+  pointer-events: none;
+}
+#airRow, #healthRow, #hungerRow {
+  display: flex;
+  gap: 1px;
+}
+.hud-heart, .hud-food, .hud-air {
+  font-size: 15px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.9));
+  user-select: none;
+}
+
+/* ── Game mode badge in HUD ── */
+#gameModeTag {
+  background: rgba(0,0,0,0.6);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 4px;
+  display: inline-block;
+  letter-spacing: 0.5px;
+}
+
+/* ── Lobby wizard ── */
+.mc-big-btn {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto 0.7rem;
+  padding: 13px;
+  font: bold 1.05rem 'Trebuchet MS', system-ui, sans-serif;
+  background: #ffe66d;
+  color: #1a1a2e;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.mc-big-btn:hover { transform: translateY(-2px); }
+.mc-pvp-btn { background: linear-gradient(135deg, #ff5e5e, #b91c1c); color: #fff; }
+.mc-pvp-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+.back-btn {
+  display: block;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font: 0.85rem 'Trebuchet MS', system-ui, sans-serif;
+  cursor: pointer;
+  padding: 0 0 1rem 0;
+  text-align: left;
+  transition: color 0.15s;
+}
+.back-btn:hover { color: rgba(255,255,255,0.8); }
+
+.step-title {
+  font: bold 1.35rem 'Trebuchet MS', system-ui, sans-serif;
+  color: #ffe66d;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.lobby-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 0.5rem;
+}
+.choice-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s;
+  color: #fff;
+  font-family: 'Trebuchet MS', system-ui, sans-serif;
+}
+.choice-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.3);
+  transform: translateY(-1px);
+}
+.choice-btn.choice-pvp:hover {
+  border-color: #ff5e5e;
+  background: rgba(255,94,94,0.1);
+}
+.choice-icon { font-size: 1.9rem; flex-shrink: 0; line-height: 1; }
+.choice-text { display: flex; flex-direction: column; }
+.choice-title { font: bold 1rem 'Trebuchet MS', system-ui, sans-serif; color: #f1f5f9; }
+.choice-desc  { font: 0.76rem system-ui, sans-serif; color: rgba(255,255,255,0.38); margin-top: 2px; }
+
+/* Saved worlds */
+.saved-worlds-label {
+  font: 0.72rem system-ui, sans-serif;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0.9rem 0 0.5rem;
+  text-align: left;
+}
+.saved-world-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  margin-bottom: 5px;
+}
+.saved-world-code {
+  font: bold 0.92rem monospace;
+  color: #ffe66d;
+  letter-spacing: 3px;
+  flex: 1;
+  text-align: left;
+}
+.saved-world-meta {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.3);
+  white-space: nowrap;
+}
+.saved-cont-btn {
+  padding: 4px 10px;
+  font: 0.8rem 'Trebuchet MS', system-ui, sans-serif;
+  background: #5ec9ff;
+  color: #0a0a2e;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.saved-del-btn {
+  padding: 4px 8px;
+  font: 0.8rem monospace;
+  background: rgba(239,68,68,0.1);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,0.22);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ── Creative inventory palette ── */
+.creative-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 38px);
+  gap: 3px;
+  background: rgba(0,0,0,0.35);
+  padding: 4px;
+  border-radius: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.creative-palette-grid .iv-slot { cursor: pointer; }
+.creative-palette-grid .iv-slot:hover {
+  background: rgba(255,220,50,0.18);
+  border-color: #ffe66d;
+}
+
+/* ── Furnace UI ── */
+.furnace-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 14px 0;
+  padding: 12px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+}
+.furnace-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.furnace-row-label {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.furnace-slot {
+  position: relative;
+  width: 52px; height: 52px;
+  background: rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+.furnace-slot:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.4); }
+.furnace-slot.filled { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.3); }
+.furnace-slot.can    { border-color: #5eff8a; box-shadow: 0 0 6px rgba(94,255,138,0.5); }
+.furnace-slot .iv-swatch { width: 42px; height: 42px; }
+.furnace-slot .cnt {
+  position: absolute; bottom: 2px; right: 4px;
+  font: bold 11px monospace; color: #fff;
+  text-shadow: 1px 1px 0 #000, -1px 1px 0 #000;
+}
+.furnace-slot-label {
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+  line-height: 1.3;
+  padding: 4px;
+}
+.furnace-arrow {
+  font: bold 26px monospace;
+  color: rgba(255,180,50,0.8);
+  padding-bottom: 18px; /* align with mid-slot */
+}

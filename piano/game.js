@@ -48,9 +48,7 @@
     return LEVELS[currentLevel].speed;
   }
 
-  // Sync music playback rate to tile speed (pitch will shift — acceptable trade-off)
   function syncMusic() {
-    // Level 2 (⭐⭐⭐) is the "natural" speed where 1 beat = 1 tile
     music.playbackRate = LEVELS[currentLevel].speed / LEVELS[2].speed;
   }
 
@@ -160,13 +158,12 @@
   function hit(col) {
     if (!running) return;
     const boardHeight = board.clientHeight;
-    const hitTop = boardHeight - TILE_HEIGHT;
 
+    // Any tile visible anywhere on screen is hittable
     let target = null;
     for (const t of tiles) {
       if (t.col !== col || t.hit) continue;
-      const bottom = t.y + TILE_HEIGHT;
-      if (bottom >= hitTop && t.y <= boardHeight) {
+      if (t.y + TILE_HEIGHT > 0 && t.y < boardHeight) {
         if (!target || t.y > target.y) target = t;
       }
     }
@@ -221,69 +218,15 @@
   }
 
   // Leaderboard
-  const LB_KEY = 'pianoTilesLeaderboard';
-
-  function loadScores() {
-    try {
-      return JSON.parse(localStorage.getItem(LB_KEY)) || [];
-    } catch {
-      return [];
-    }
-  }
-
-  async function saveToSupabase(name, scoreVal) {
-    if (typeof sb === 'undefined') {
-      console.log('Supabase not initialized');
-      return false;
-    }
-
-    try {
-      const { data: { session }, error: sessionError } = await sb.auth.getSession();
-
-      if (sessionError) { console.error('Session error:', sessionError); return false; }
-      if (!session) { console.log('No active session'); return false; }
-
-      const { data: existing, error: fetchError } = await sb
-        .from('scores')
-        .select('payload')
-        .eq('player_id', session.user.id)
-        .eq('game', 'piano')
-        .maybeSingle();
-
-      if (fetchError) { console.error('Fetch error:', fetchError); return false; }
-
-      if (existing?.payload?.score >= scoreVal) {
-        console.log('Existing score is better, skipping save');
-        return true;
-      }
-
-      const { error: upsertError } = await sb
-        .from('scores')
-        .upsert({
-          player_id: session.user.id,
-          game: 'piano',
-          payload: { score: scoreVal, name }
-        }, { onConflict: 'player_id,game' });
-
-      if (upsertError) { console.error('Upsert error:', upsertError); return false; }
-
-      console.log('Score saved to Supabase successfully');
-      return true;
-
-    } catch (err) {
-      console.error('Unexpected error in saveToSupabase:', err);
-      return false;
-    }
-  }
-
   async function saveScore(name, scoreVal) {
-    const supabaseSuccess = await saveToSupabase(name, scoreVal);
-    if (!supabaseSuccess) console.log('Supabase save failed or skipped, saving to localStorage only');
-
-    const scores = loadScores();
-    scores.push({ name, score: scoreVal, date: Date.now() });
-    scores.sort((a, b) => b.score - a.score);
-    localStorage.setItem(LB_KEY, JSON.stringify(scores.slice(0, 10)));
+    if (typeof sb === 'undefined') return;
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const { error } = await sb.rpc('submit_score', {
+      p_game: 'piano',
+      p_payload: { score: scoreVal, name }
+    });
+    if (error) console.error('save error:', error);
   }
 
   async function renderLeaderboard() {

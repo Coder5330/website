@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Announcements — Skill Hub</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <ul class="menu">
+    <li><a href="../index.html">Homepage</a></li>
+  </ul>
+
+  <div class="page-wrap">
+    <div class="page-eyebrow">ANNOUNCEMENTS</div>
+    <h1 class="page-title">Announcements</h1>
+
+    <div id="compose-wrap" style="display:none" class="compose-box">
+      <input id="ann-title" type="text" placeholder="Title" maxlength="100">
+      <textarea id="ann-content" placeholder="Write announcement…" maxlength="2000" rows="4"></textarea>
+      <div class="compose-row">
+        <button id="ann-post-btn" onclick="postAnnouncement()">Post</button>
+        <span id="ann-st" class="field-status"></span>
+      </div>
+    </div>
+
+    <div id="ann-list"><p class="muted">Loading…</p></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="../auth-guard.js"></script>
+  <script src="../menu.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

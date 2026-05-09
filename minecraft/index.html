@@ -10,7 +10,6 @@
 <body>
   <ul class="menu">
     <li><a href="../index.html">Homepage</a></li>
-    <li><a href="../about/index.html">About</a></li>
   </ul>
 
   <div id="mcApp">
@@ -20,24 +19,109 @@
     <div id="hudInfo">
       <div id="roomBadge"></div>
       <div id="onlineBadge"></div>
+      <div id="gameModeTag" style="display:none"></div>
     </div>
     <div id="nameTags"></div>
     <div id="underwaterOverlay"></div>
+    <div id="damageFlash"></div>
 
+    <!-- Health / Hunger HUD (survival only) -->
+    <div id="healthHungerHud" style="display:none">
+      <div id="airRow" style="display:none"></div>
+      <div id="healthRow"></div>
+      <div id="hungerRow"></div>
+    </div>
+
+    <!-- Death screen -->
+    <div id="deathScreen" style="display:none">
+      <div class="death-msg">☠️ You died!</div>
+      <button onclick="mc3dRespawn()">Respawn</button>
+    </div>
+
+    <!-- Lobby -->
     <div id="lobbyPanel" class="mc-overlay">
       <div class="mc-panel">
-        <h1>⛏️ Minecraft 3D</h1>
-        <p class="mc-sub">3D voxel world with friends — built from your Python game!</p>
-        <button id="createBtn">Create World</button>
-        <div class="mc-or">— or —</div>
-        <div class="mc-join">
-          <input id="codeInput" type="text" maxlength="4" placeholder="CODE" />
-          <button id="joinBtn">Join</button>
+
+        <!-- Step 1: Game type -->
+        <div id="lstep1">
+          <h1>⛏️ Minecraft 3D</h1>
+          <p class="mc-sub">How do you want to play?</p>
+          <div class="lobby-choices">
+            <button class="choice-btn" data-next="sp">
+              <span class="choice-icon">👤</span>
+              <div class="choice-text">
+                <span class="choice-title">Singleplayer</span>
+                <span class="choice-desc">Play alone, world saves locally</span>
+              </div>
+            </button>
+            <button class="choice-btn" data-next="mp">
+              <span class="choice-icon">👥</span>
+              <div class="choice-text">
+                <span class="choice-title">Multiplayer</span>
+                <span class="choice-desc">Share a room code with friends</span>
+              </div>
+            </button>
+            <button class="choice-btn choice-pvp" data-next="pvp">
+              <span class="choice-icon">⚔️</span>
+              <div class="choice-text">
+                <span class="choice-title">PvP Arena</span>
+                <span class="choice-desc">Fight everyone in the same world</span>
+              </div>
+            </button>
+          </div>
         </div>
-        <p class="mc-hint">
-          Click canvas to lock cursor &nbsp;·&nbsp; WASD move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; Mouse look<br>
-          Left-click break &nbsp;·&nbsp; Right-click place &nbsp;·&nbsp; 1-7 select block &nbsp;·&nbsp; ESC unlock
-        </p>
+
+        <!-- Step 2: Survival / Creative -->
+        <div id="lstep2" style="display:none">
+          <button class="back-btn" data-back="lstep1">← Back</button>
+          <h2 class="step-title">Choose Mode</h2>
+          <div class="lobby-choices">
+            <button class="choice-btn" data-mode="survival">
+              <span class="choice-icon">🗡️</span>
+              <div class="choice-text">
+                <span class="choice-title">Survival</span>
+                <span class="choice-desc">Health, hunger &amp; fall damage</span>
+              </div>
+            </button>
+            <button class="choice-btn" data-mode="creative">
+              <span class="choice-icon">🎨</span>
+              <div class="choice-text">
+                <span class="choice-title">Creative</span>
+                <span class="choice-desc">Fly freely, instant mine, infinite blocks</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3 — Singleplayer -->
+        <div id="lstep3sp" style="display:none">
+          <button class="back-btn" data-back="lstep2">← Back</button>
+          <h2 class="step-title">Your World</h2>
+          <button id="spPlayBtn" class="mc-big-btn">🌍 New World</button>
+          <div id="spSavedWorlds"></div>
+        </div>
+
+        <!-- Step 3 — Multiplayer -->
+        <div id="lstep3mp" style="display:none">
+          <button class="back-btn" data-back="lstep2">← Back</button>
+          <h2 class="step-title">Multiplayer</h2>
+          <button id="createBtn" class="mc-big-btn">🌍 Create World</button>
+          <div class="mc-or">— or join —</div>
+          <div class="mc-join">
+            <input id="codeInput" type="text" maxlength="4" placeholder="CODE" autocomplete="off" />
+            <button id="joinBtn">Join</button>
+          </div>
+          <div id="mpSavedWorlds"></div>
+        </div>
+
+        <!-- Step 3 — PvP -->
+        <div id="lstep3pvp" style="display:none">
+          <button class="back-btn" data-back="lstep1">← Back</button>
+          <h2 class="step-title">PvP Arena</h2>
+          <p class="mc-sub" style="margin-bottom:1.2rem">Everyone joins the same world.<br>Combat is enabled — take no prisoners.</p>
+          <button id="pvpJoinBtn" class="mc-big-btn mc-pvp-btn">⚔️ Enter Arena</button>
+        </div>
+
       </div>
     </div>
 
@@ -45,7 +129,6 @@
       <div class="mc-panel">
         <p id="waitMsg">Connecting to world…</p>
         <div class="mc-code">Room: <span id="waitCode"></span></div>
-        <p class="mc-hint">Share the code with your friend!</p>
       </div>
     </div>
 
