@@ -29,27 +29,43 @@
   <div id="chess-game" style="display:none">
     <div class="game-layout">
 
-      <!-- Left column: back + board + buttons -->
+      <!-- Left column: player bars + clocks + board + actions -->
       <div class="game-left">
-        <div class="game-toprow">
-          <button class="back-btn" id="btn-back">&#8592; Back</button>
-          <span class="opponent-name" id="opponent-name"></span>
+
+        <!-- Opponent bar (top) -->
+        <div class="player-bar" id="player-bar-top">
+          <div class="player-bar-left">
+            <span class="player-bar-name" id="opponent-name"></span>
+            <span class="captured-pieces" id="captured-black-pieces"></span>
+          </div>
+          <span class="material-adv" id="adv-top"></span>
         </div>
+
         <div class="clock-row opponent-clock-row">
           <div class="clock" id="clock-opponent"></div>
         </div>
+
         <div class="board-wrapper">
           <div class="chess-board" id="chess-board"></div>
         </div>
+
         <div class="clock-row player-clock-row">
           <div class="clock" id="clock-player"></div>
         </div>
-        <div class="player-name-row">
-          <span class="player-name" id="player-name">You</span>
+
+        <!-- Player bar (bottom) -->
+        <div class="player-bar" id="player-bar-bottom">
+          <div class="player-bar-left">
+            <span class="player-bar-name" id="player-name">You</span>
+            <span class="captured-pieces" id="captured-white-pieces"></span>
+          </div>
+          <span class="material-adv" id="adv-bottom"></span>
         </div>
+
         <div class="board-action-row">
-          <button class="action-btn resign-btn" id="btn-resign" style="display:none">Resign</button>
-          <button class="action-btn draw-btn"   id="btn-draw"   style="display:none">Draw?</button>
+          <button class="action-btn resign-btn"   id="btn-resign"   style="display:none">Resign</button>
+          <button class="action-btn draw-btn"     id="btn-draw"     style="display:none">½ Draw</button>
+          <button class="action-btn takeback-btn" id="btn-takeback" style="display:none">↩ Takeback</button>
         </div>
       </div>
 
@@ -60,19 +76,9 @@
           <div class="move-list" id="move-list"></div>
         </div>
         <div class="status-panel">
-          <div class="status-turn" id="status-turn">White's turn</div>
-          <div class="status-msg"  id="status-msg"></div>
+          <div class="status-turn"   id="status-turn">White's turn</div>
+          <div class="status-msg"    id="status-msg"></div>
           <div class="status-online" id="status-online" style="display:none"></div>
-        </div>
-        <div class="captured-area">
-          <div class="captured-row">
-            <span class="captured-label">White captured:</span>
-            <span class="captured-pieces" id="captured-white-pieces"></span>
-          </div>
-          <div class="captured-row">
-            <span class="captured-label">Black captured:</span>
-            <span class="captured-pieces" id="captured-black-pieces"></span>
-          </div>
         </div>
       </div>
 
