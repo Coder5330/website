@@ -502,7 +502,6 @@ const SF_LEVELS = [
   { label:'Level 7 · Expert',       skill:17, elo:2000, time:1500 },
   { label:'Level 8 · Stockfish Max',skill:20, elo:null, time:2000 },
 ];
-let currentLevel = 3; // default level index (0-based), starts at Level 4
 
 // ── Game Modes ───────────────────────────────────────────────
 const MODE_PVP_LOCAL  = 'pvp-local';
@@ -511,41 +510,440 @@ const MODE_PVC_LOCAL  = 'pvc-local';
 const MODE_CVC_LOCAL  = 'cvc-local';
 
 // ── App State ────────────────────────────────────────────────
-let gameState   = createState();
-let currentMode = MODE_PVP_LOCAL;
-let selected    = -1;          // currently selected square
-let legalMovesCache = [];      // legal moves for selected piece
-let cvcInterval = null;        // interval for CvC auto-play
-let aiThinking  = false;       // lock while AI computes
+let gameState      = createState();
+let currentMode    = MODE_PVP_LOCAL;
+let currentLevel   = 3;   // default level index (0-based), Level 4
+let cvcLevelWhite  = 3;
+let cvcLevelBlack  = 3;
+let selected       = -1;
+let legalMovesCache = [];
+let cvcRunning     = false;
+let aiThinking     = false;
 
 // Online state
-let onlineColor   = null;      // WHITE or BLACK for online mode
-let onlineChannel = null;      // Supabase realtime channel
-let onlineRoomCode= null;
+let onlineColor        = null;
+let onlineChannel      = null;
+let onlineRoomCode     = null;
 let onlineOpponentName = '';
-let onlineReady   = false;     // both players connected
+let onlineReady        = false;
 
-// ── DOM refs ────────────────────────────────────────────────
+// Time-control state
+let currentTC = null; // { base: seconds, inc: seconds } or null (unlimited)
+let clockWhite = 0;   // seconds remaining (float)
+let clockBlack = 0;
+let clockInterval = null;
+let clockLastTick = 0;
+
+// Move list
+let moveHistory = []; // array of san strings per half-move
+
+// ── DOM refs ─────────────────────────────────────────────────
 const boardEl          = document.getElementById('chess-board');
 const statusTurnEl     = document.getElementById('status-turn');
 const statusMsgEl      = document.getElementById('status-msg');
 const statusOnlineEl   = document.getElementById('status-online');
-const onlineControlsEl = document.getElementById('online-controls');
-const btnCreateGame    = document.getElementById('btn-create-game');
-const btnJoinGame      = document.getElementById('btn-join-game');
-const joinCodeInput    = document.getElementById('join-code-input');
-const roomInfoEl       = document.getElementById('room-info');
-const btnNewGame       = document.getElementById('btn-new-game');
-const btnStopCvc       = document.getElementById('btn-stop-cvc');
 const capturedWhiteEl  = document.getElementById('captured-white-pieces');
 const capturedBlackEl  = document.getElementById('captured-black-pieces');
+const clockOpponentEl  = document.getElementById('clock-opponent');
+const clockPlayerEl    = document.getElementById('clock-player');
+const opponentNameEl   = document.getElementById('opponent-name');
+const playerNameEl     = document.getElementById('player-name');
+const moveListEl       = document.getElementById('move-list');
+const lobbyEl          = document.getElementById('chess-lobby');
+const gameEl           = document.getElementById('chess-game');
+const modalOverlay     = document.getElementById('modal-overlay');
+const modalBox         = document.getElementById('modal-box');
+const btnBack          = document.getElementById('btn-back');
+const btnResign        = document.getElementById('btn-resign');
+const btnDraw          = document.getElementById('btn-draw');
+const btnCvcOpen       = document.getElementById('btn-cvc-open');
 
-// ── Render ───────────────────────────────────────────────────
+// ── Time-control definitions ──────────────────────────────────
+const TIME_CONTROLS = [
+  { label:'1+0',   base:60,    inc:0,  cat:'bullet'    },
+  { label:'2+1',   base:120,   inc:1,  cat:'bullet'    },
+  { label:'3+0',   base:180,   inc:0,  cat:'blitz'     },
+  { label:'3+2',   base:180,   inc:2,  cat:'blitz'     },
+  { label:'5+0',   base:300,   inc:0,  cat:'blitz'     },
+  { label:'5+3',   base:300,   inc:3,  cat:'blitz'     },
+  { label:'10+0',  base:600,   inc:0,  cat:'rapid'     },
+  { label:'10+5',  base:600,   inc:5,  cat:'rapid'     },
+  { label:'15+10', base:900,   inc:10, cat:'rapid'     },
+  { label:'30+0',  base:1800,  inc:0,  cat:'classical' },
+  { label:'30+20', base:1800,  inc:20, cat:'classical' },
+  { label:'∞',     base:0,     inc:0,  cat:'unlimited' },
+];
 
+const CAT_LABELS = {
+  bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid',
+  classical: 'Classical', unlimited: 'Unlimited',
+};
+
+// ── Build lobby grid ──────────────────────────────────────────
+function buildLobby() {
+  const grid = document.getElementById('tc-grid');
+  grid.innerHTML = '';
+  for (const tc of TIME_CONTROLS) {
+    const btn = document.createElement('button');
+    btn.className = 'tc-btn';
+    btn.innerHTML = `<span class="tc-time">${tc.label}</span>
+      <span class="tc-cat ${tc.cat}">${CAT_LABELS[tc.cat]}</span>`;
+    btn.addEventListener('click', () => openSetupModal(tc));
+    grid.appendChild(btn);
+  }
+}
+
+// ── Modal helpers ─────────────────────────────────────────────
+function showModal(html) {
+  modalBox.innerHTML = html;
+  modalOverlay.style.display = 'flex';
+}
+
+function hideModal() {
+  modalOverlay.style.display = 'none';
+  modalBox.innerHTML = '';
+}
+
+// Close modal on overlay click
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay) hideModal();
+});
+
+// ── Setup modal: choose how to play ──────────────────────────
+function openSetupModal(tc) {
+  currentTC = tc;
+  showModal(`
+    <div class="modal-title">
+      Choose how to play
+      <button class="modal-close" id="m-close">&times;</button>
+    </div>
+    <hr class="modal-hr">
+    <button class="modal-opt-btn" id="m-friend">&#128101; Play with a friend</button>
+    <button class="modal-opt-btn" id="m-computer">&#129302; Play vs Computer</button>
+    <button class="modal-opt-btn" id="m-local">&#127968; Local (2 players)</button>
+  `);
+  document.getElementById('m-close').addEventListener('click', hideModal);
+  document.getElementById('m-friend').addEventListener('click', () => openOnlineModal());
+  document.getElementById('m-computer').addEventListener('click', () => openComputerModal());
+  document.getElementById('m-local').addEventListener('click', () => {
+    hideModal();
+    startGame(MODE_PVP_LOCAL);
+  });
+}
+
+// ── Online modal ──────────────────────────────────────────────
+function openOnlineModal() {
+  showModal(`
+    <div class="modal-title">
+      Play with a friend
+      <button class="modal-close" id="m-close">&times;</button>
+    </div>
+    <hr class="modal-hr">
+    <button class="modal-opt-btn" id="m-create">Create Game — get a code</button>
+    <button class="modal-opt-btn" id="m-join-show">Join Game — enter a code</button>
+    <div id="m-online-sub" style="display:none"></div>
+  `);
+  document.getElementById('m-close').addEventListener('click', hideModal);
+  document.getElementById('m-create').addEventListener('click', () => {
+    startGame(MODE_PVP_ONLINE, { role: 'creator' });
+    hideModal();
+  });
+  document.getElementById('m-join-show').addEventListener('click', () => {
+    const sub = document.getElementById('m-online-sub');
+    sub.style.display = 'block';
+    sub.innerHTML = `
+      <div class="modal-sub">
+        <div class="modal-sub-title">Enter room code</div>
+        <div class="modal-join-row">
+          <input type="text" id="m-code-input" placeholder="XXXXXX" maxlength="6">
+          <button class="modal-opt-btn" style="width:auto;flex-shrink:0;margin:0" id="m-join-btn">Join</button>
+        </div>
+        <div class="modal-info-text" id="m-join-info"></div>
+      </div>
+    `;
+    document.getElementById('m-join-btn').addEventListener('click', () => {
+      const code = document.getElementById('m-code-input').value.trim().toUpperCase();
+      if (code.length !== 6) {
+        document.getElementById('m-join-info').textContent = 'Enter a valid 6-character code.';
+        return;
+      }
+      startGame(MODE_PVP_ONLINE, { role: 'joiner', code });
+      hideModal();
+    });
+    document.getElementById('m-code-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('m-join-btn').click();
+    });
+  });
+}
+
+// ── Computer modal ────────────────────────────────────────────
+function openComputerModal() {
+  showModal(`
+    <div class="modal-title">
+      Play vs Computer
+      <button class="modal-close" id="m-close">&times;</button>
+    </div>
+    <hr class="modal-hr">
+    <div class="modal-label">Difficulty</div>
+    <div class="level-grid" id="m-level-grid"></div>
+    <button class="modal-primary-btn" id="m-play-computer">Play</button>
+  `);
+  document.getElementById('m-close').addEventListener('click', hideModal);
+  renderLevelPicker('m-level-grid', currentLevel, idx => { currentLevel = idx; });
+  document.getElementById('m-play-computer').addEventListener('click', () => {
+    hideModal();
+    startGame(MODE_PVC_LOCAL);
+  });
+}
+
+// ── CvC modal ─────────────────────────────────────────────────
+function openCvcModal() {
+  showModal(`
+    <div class="modal-title">
+      CPU vs CPU
+      <button class="modal-close" id="m-close">&times;</button>
+    </div>
+    <hr class="modal-hr">
+    <div class="modal-label">White — Difficulty</div>
+    <div class="level-grid" id="m-cvc-white"></div>
+    <div class="modal-label">Black — Difficulty</div>
+    <div class="level-grid" id="m-cvc-black"></div>
+    <button class="modal-primary-btn" id="m-start-cvc">Start</button>
+  `);
+  document.getElementById('m-close').addEventListener('click', hideModal);
+  renderLevelPicker('m-cvc-white', cvcLevelWhite, idx => { cvcLevelWhite = idx; });
+  renderLevelPicker('m-cvc-black', cvcLevelBlack, idx => { cvcLevelBlack = idx; });
+  document.getElementById('m-start-cvc').addEventListener('click', () => {
+    hideModal();
+    currentTC = null; // no clock for CvC
+    startGame(MODE_CVC_LOCAL);
+  });
+}
+
+// ── Level picker helper ───────────────────────────────────────
+function renderLevelPicker(containerId, activeIdx, onChange) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  SF_LEVELS.forEach((lv, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'level-pick-btn' + (idx === activeIdx ? ' active' : '');
+    btn.textContent = `L${idx+1}`;
+    btn.title = lv.label;
+    btn.addEventListener('click', () => {
+      onChange(idx);
+      container.querySelectorAll('.level-pick-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === idx);
+      });
+    });
+    container.appendChild(btn);
+  });
+}
+
+// ── Clock helpers ─────────────────────────────────────────────
+function formatClock(secs) {
+  if (secs < 0) secs = 0;
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  const ds = Math.floor((secs * 10) % 10);
+  if (m >= 10) {
+    // MM:SS, no decimals when >= 10 minutes
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  return `${m}:${String(s).padStart(2,'0')}.${ds}`;
+}
+
+function startClock() {
+  stopClock();
+  if (!currentTC || currentTC.base === 0) return; // unlimited
+  clockLastTick = performance.now();
+  clockInterval = setInterval(tickClock, 100);
+  renderClocks();
+}
+
+function stopClock() {
+  if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+}
+
+function tickClock() {
+  if (gameState.gameOver) { stopClock(); return; }
+  const now = performance.now();
+  const delta = (now - clockLastTick) / 1000;
+  clockLastTick = now;
+
+  if (gameState.turn === WHITE) {
+    clockWhite -= delta;
+    if (clockWhite <= 0) {
+      clockWhite = 0;
+      stopClock();
+      endByTime(WHITE);
+      return;
+    }
+  } else {
+    clockBlack -= delta;
+    if (clockBlack <= 0) {
+      clockBlack = 0;
+      stopClock();
+      endByTime(BLACK);
+      return;
+    }
+  }
+  renderClocks();
+}
+
+function addIncrement(color) {
+  if (!currentTC || currentTC.inc === 0) return;
+  if (color === WHITE) clockWhite += currentTC.inc;
+  else                 clockBlack += currentTC.inc;
+}
+
+function endByTime(loserColor) {
+  gameState.gameOver = true;
+  gameState.gameOverMsg = (loserColor === WHITE ? 'White' : 'Black') + ' ran out of time!';
+  stopClock();
+  renderClocks();
+  updateStatus();
+  renderBoard();
+}
+
+function renderClocks() {
+  const unlimited = !currentTC || currentTC.base === 0;
+
+  // Determine which clock is "opponent" and which is "player"
+  // In online mode, player=onlineColor; in CvC both shown as abstract;
+  // in local modes, bottom = white (player), top = black (opponent)
+  let playerColor, opponentColor;
+  if (currentMode === MODE_PVP_ONLINE && onlineColor !== null) {
+    playerColor   = onlineColor;
+    opponentColor = -onlineColor;
+  } else {
+    playerColor   = WHITE;
+    opponentColor = BLACK;
+  }
+
+  const playerSecs   = playerColor   === WHITE ? clockWhite : clockBlack;
+  const opponentSecs = opponentColor === WHITE ? clockWhite : clockBlack;
+  const activeColor  = gameState.turn;
+
+  if (unlimited) {
+    clockPlayerEl.classList.add('empty');
+    clockOpponentEl.classList.add('empty');
+    return;
+  }
+  clockPlayerEl.classList.remove('empty');
+  clockOpponentEl.classList.remove('empty');
+
+  clockPlayerEl.textContent   = formatClock(playerSecs);
+  clockOpponentEl.textContent = formatClock(opponentSecs);
+
+  clockPlayerEl.classList.toggle('active', activeColor === playerColor && !gameState.gameOver);
+  clockOpponentEl.classList.toggle('active', activeColor === opponentColor && !gameState.gameOver);
+}
+
+// ── Show/hide lobby vs game ────────────────────────────────────
+function showLobby() {
+  stopClock();
+  stopCvC();
+  leaveOnlineRoom();
+  lobbyEl.style.display = 'flex';
+  gameEl.style.display  = 'none';
+}
+
+function showGame() {
+  lobbyEl.style.display = 'none';
+  gameEl.style.display  = 'block';
+}
+
+// ── Start game ────────────────────────────────────────────────
+async function startGame(mode, opts = {}) {
+  stopCvC();
+  leaveOnlineRoom();
+  aiThinking = false;
+
+  currentMode = mode;
+  selected    = -1;
+  legalMovesCache = [];
+  moveHistory = [];
+
+  // Reset and set up board
+  gameState = createState();
+  setupBoard(gameState);
+
+  // Set up clocks
+  if (currentTC && currentTC.base > 0) {
+    clockWhite = currentTC.base;
+    clockBlack = currentTC.base;
+  } else {
+    clockWhite = 0;
+    clockBlack = 0;
+  }
+
+  // Names
+  let myName = 'You';
+  let oppName = '';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: user } = await sb.from('users').select('display_name').eq('id', session.user.id).maybeSingle();
+      if (user && user.display_name) myName = user.display_name;
+    }
+  } catch {}
+
+  if (mode === MODE_PVC_LOCAL) {
+    oppName = SF_LEVELS[currentLevel].label;
+  } else if (mode === MODE_CVC_LOCAL) {
+    oppName = SF_LEVELS[cvcLevelBlack].label;
+    myName  = SF_LEVELS[cvcLevelWhite].label;
+  } else if (mode === MODE_PVP_ONLINE) {
+    oppName = 'Waiting…';
+  } else {
+    oppName = 'Player 2';
+  }
+
+  playerNameEl.textContent   = myName;
+  opponentNameEl.textContent = oppName;
+
+  // Show resign/draw only for human games
+  const showActions = (mode === MODE_PVP_LOCAL || mode === MODE_PVC_LOCAL || mode === MODE_PVP_ONLINE);
+  btnResign.style.display = showActions ? 'inline-block' : 'none';
+  btnDraw.style.display   = (mode === MODE_PVP_LOCAL || mode === MODE_PVP_ONLINE) ? 'inline-block' : 'none';
+
+  showGame();
+  renderBoard();
+  updateStatus();
+  renderMoveList();
+  renderClocks();
+
+  // Online setup
+  if (mode === MODE_PVP_ONLINE) {
+    if (opts.role === 'creator') {
+      await createOnlineGame();
+    } else if (opts.role === 'joiner' && opts.code) {
+      onlineRoomCode = opts.code;
+      onlineColor    = BLACK;
+      statusOnlineEl.textContent = 'Joining…';
+      statusOnlineEl.style.display = 'block';
+      await joinChannel(opts.code, 'joiner', myName);
+    }
+    return; // clock starts when both players are ready
+  }
+
+  // Start clock for non-online
+  startClock();
+
+  if (mode === MODE_CVC_LOCAL) {
+    setTimeout(startCvC, 600);
+  } else if (mode === MODE_PVC_LOCAL) {
+    // White is human, black is computer
+    // AI plays immediately if black's turn (won't happen at start but guard)
+    if (gameState.turn === BLACK) scheduleAI(300);
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────
 function renderBoard() {
   boardEl.innerHTML = '';
-  const legalSet    = new Set(legalMovesCache.map(m => m.to));
-  const captureSet  = new Set(
+  const legalSet   = new Set(legalMovesCache.map(m => m.to));
+  const captureSet = new Set(
     legalMovesCache.filter(m => gameState.board[m.to] !== 0 || m.enPassant).map(m => m.to)
   );
   const lastFrom = gameState.lastMove ? gameState.lastMove.from : -1;
@@ -556,13 +954,10 @@ function renderBoard() {
     const cell = document.createElement('div');
     cell.className = 'cell ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
 
-    // Highlights
-    if (i === selected)           cell.classList.add('selected');
-    if (i === lastFrom || i === lastTo) cell.classList.add('last-move');
-
+    if (i === selected)                    cell.classList.add('selected');
+    if (i === lastFrom || i === lastTo)    cell.classList.add('last-move');
     if (selected >= 0 && legalSet.has(i)) {
-      if (captureSet.has(i)) cell.classList.add('legal-capture');
-      else                    cell.classList.add('legal-move');
+      cell.classList.add(captureSet.has(i) ? 'legal-capture' : 'legal-move');
     }
 
     const p = gameState.board[i];
@@ -580,39 +975,65 @@ function renderBoard() {
   }
 
   // Captured pieces
-  capturedWhiteEl.innerHTML = gameState.capturedByWhite.map(p => pieceImg(Math.abs(p), '22px')).join('');
-  capturedBlackEl.innerHTML = gameState.capturedByBlack.map(p => pieceImg(-Math.abs(p), '22px')).join('');
+  capturedWhiteEl.innerHTML = gameState.capturedByWhite.map(p => pieceImg(Math.abs(p), '20px')).join('');
+  capturedBlackEl.innerHTML = gameState.capturedByBlack.map(p => pieceImg(-Math.abs(p), '20px')).join('');
 }
 
 function updateStatus() {
   if (gameState.gameOver) {
     statusTurnEl.textContent = gameState.gameOverMsg;
     statusMsgEl.textContent  = '';
+    stopClock();
     return;
   }
-
   const turnName = gameState.turn === WHITE ? 'White' : 'Black';
   statusTurnEl.textContent = `${turnName}'s turn`;
-
-  if (isInCheck(gameState, gameState.turn)) {
-    statusMsgEl.textContent = `${turnName} is in check!`;
-  } else {
-    statusMsgEl.textContent = '';
-  }
+  statusMsgEl.textContent  = isInCheck(gameState, gameState.turn) ? `${turnName} is in check!` : '';
 }
 
-// ── Cell Click Handler ───────────────────────────────────────
+// ── Move notation helper ──────────────────────────────────────
+const FILE_CHARS = ['a','b','c','d','e','f','g','h'];
+const PIECE_SYM  = {[PAWN]:'', [KNIGHT]:'N', [BISHOP]:'B', [ROOK]:'R', [QUEEN]:'Q', [KING]:'K'};
+
+function moveToSAN(state, move) {
+  // Minimal SAN: piece + destination (not full disambiguation)
+  if (move.castle === 'KS') return 'O-O';
+  if (move.castle === 'QS') return 'O-O-O';
+  const piece = state.board[move.from];
+  const kind  = absPiece(piece);
+  const capture = state.board[move.to] !== 0 || move.enPassant;
+  let san = PIECE_SYM[kind];
+  if (kind === PAWN && capture) san += FILE_CHARS[col(move.from)];
+  if (capture) san += 'x';
+  san += FILE_CHARS[col(move.to)] + (8 - row(move.to));
+  if (move.promotion) san += '=' + PIECE_SYM[move.promotion];
+  return san;
+}
+
+function renderMoveList() {
+  moveListEl.innerHTML = '';
+  for (let i = 0; i < moveHistory.length; i++) {
+    if (i % 2 === 0) {
+      const num = document.createElement('span');
+      num.className = 'move-num';
+      num.textContent = `${(i/2|0)+1}.`;
+      moveListEl.appendChild(num);
+    }
+    const tok = document.createElement('span');
+    tok.className = 'move-token' + (i === moveHistory.length - 1 ? ' latest' : '');
+    tok.textContent = moveHistory[i];
+    moveListEl.appendChild(tok);
+  }
+  // Scroll to bottom
+  moveListEl.scrollTop = moveListEl.scrollHeight;
+}
+
+// ── Cell Click ───────────────────────────────────────────────
 
 function onCellClick(e) {
   const clickedSq = parseInt(e.currentTarget.dataset.sq);
-
-  // Block interaction if game over
   if (gameState.gameOver) return;
-
-  // Block if it's not a human's turn
   if (!isHumanTurn()) return;
-
-  // Online mode: block if not your color's turn
   if (currentMode === MODE_PVP_ONLINE) {
     if (!onlineReady) return;
     if (gameState.turn !== onlineColor) return;
@@ -622,7 +1043,6 @@ function onCellClick(e) {
   const ownColor      = gameState.turn;
 
   if (selected >= 0) {
-    // Check if clicked square is a legal move destination
     const move = legalMovesCache.find(m => m.to === clickedSq);
     if (move) {
       executeMove(move);
@@ -630,21 +1050,18 @@ function onCellClick(e) {
       legalMovesCache = [];
       return;
     }
-    // Clicked own piece: re-select
     if (pieceOnSquare !== 0 && pieceColor(pieceOnSquare) === ownColor) {
       selected = clickedSq;
       legalMovesCache = legalMoves(gameState, ownColor).filter(m => m.from === clickedSq);
       renderBoard();
       return;
     }
-    // Deselect
     selected = -1;
     legalMovesCache = [];
     renderBoard();
     return;
   }
 
-  // Nothing selected — try to select a piece
   if (pieceOnSquare !== 0 && pieceColor(pieceOnSquare) === ownColor) {
     selected = clickedSq;
     legalMovesCache = legalMoves(gameState, ownColor).filter(m => m.from === clickedSq);
@@ -652,22 +1069,19 @@ function onCellClick(e) {
   }
 }
 
-/** Is it currently a human player's turn? */
 function isHumanTurn() {
   if (currentMode === MODE_CVC_LOCAL) return false;
   if (currentMode === MODE_PVC_LOCAL && gameState.turn === BLACK) return false;
   return true;
 }
 
-// ── Execute Move ─────────────────────────────────────────────
+// ── Execute Move ──────────────────────────────────────────────
 
-/**
- * Execute a move on the current game state and trigger post-move logic.
- * @param {object} move
- * @param {boolean} broadcast - send to online opponent
- */
 function executeMove(move, broadcast = true) {
-  // Track captures for display
+  // Record SAN before applying (board state needed)
+  const san = moveToSAN(gameState, move);
+
+  // Track captures
   const capturedPiece = gameState.board[move.to];
   if (move.enPassant) {
     const epPawnRow = (gameState.turn === WHITE) ? row(move.to)+1 : row(move.to)-1;
@@ -680,8 +1094,14 @@ function executeMove(move, broadcast = true) {
     else                          gameState.capturedByBlack.push(capturedPiece);
   }
 
+  const movedColor = gameState.turn;
   applyMove(gameState, move);
+
+  // Add increment AFTER move applied
+  addIncrement(movedColor);
+
   checkGameOver(gameState);
+  moveHistory.push(san);
 
   // Broadcast online
   if (broadcast && currentMode === MODE_PVP_ONLINE && onlineChannel) {
@@ -696,8 +1116,9 @@ function executeMove(move, broadcast = true) {
   legalMovesCache = [];
   renderBoard();
   updateStatus();
+  renderMoveList();
+  renderClocks();
 
-  // Trigger AI if needed
   if (!gameState.gameOver) {
     if (currentMode === MODE_PVC_LOCAL && gameState.turn === BLACK) {
       scheduleAI(300);
@@ -705,7 +1126,7 @@ function executeMove(move, broadcast = true) {
   }
 }
 
-// ── AI scheduling ────────────────────────────────────────────
+// ── AI scheduling ─────────────────────────────────────────────
 
 function scheduleAI(delay) {
   if (aiThinking) return;
@@ -728,109 +1149,33 @@ function scheduleAI(delay) {
 }
 
 async function startCvC() {
-  stopCvC();
-  btnStopCvc.style.display = 'block';
-  let running = true;
-  cvcInterval = { stop: () => { running = false; } };
+  cvcRunning = true;
 
   const step = async () => {
-    if (!running || gameState.gameOver || currentMode !== MODE_CVC_LOCAL) {
-      stopCvC(); return;
+    if (!cvcRunning || gameState.gameOver || currentMode !== MODE_CVC_LOCAL) {
+      cvcRunning = false; return;
     }
     try {
-      const lv = SF_LEVELS[currentLevel];
+      const levelIdx = gameState.turn === WHITE ? cvcLevelWhite : cvcLevelBlack;
+      const lv = SF_LEVELS[levelIdx];
       const fen = stateToFEN(gameState);
       const uci = await sfBestMove(fen, lv.skill, lv.elo, lv.time);
-      if (!running) return;
+      if (!cvcRunning) return;
       const move = uciToMove(uci, gameState);
-      if (!move) { stopCvC(); return; }
+      if (!move) { cvcRunning = false; return; }
       executeMove(move, false);
-      if (running && !gameState.gameOver) setTimeout(step, 400);
-      else stopCvC();
+      if (cvcRunning && !gameState.gameOver) setTimeout(step, 400);
+      else cvcRunning = false;
     } catch (err) {
       console.error('Stockfish CvC error:', err);
-      stopCvC();
+      cvcRunning = false;
     }
   };
   setTimeout(step, 600);
 }
 
 function stopCvC() {
-  if (cvcInterval) { cvcInterval.stop?.(); cvcInterval = null; }
-  btnStopCvc.style.display = 'none';
-}
-
-// ── New Game ─────────────────────────────────────────────────
-
-function newGame() {
-  stopCvC();
-  aiThinking = false;
-  selected = -1;
-  legalMovesCache = [];
-
-  gameState = createState();
-  setupBoard(gameState);
-
-  renderBoard();
-  updateStatus();
-
-  if (currentMode === MODE_CVC_LOCAL) {
-    setTimeout(startCvC, 800);
-  }
-}
-
-// ── Level selector UI ────────────────────────────────────────
-
-const levelSelectorEl = document.getElementById('level-selector');
-const levelButtonsEl  = document.getElementById('level-buttons');
-
-function renderLevelUI() {
-  const computerMode = (currentMode === MODE_PVC_LOCAL || currentMode === MODE_CVC_LOCAL);
-  levelSelectorEl.style.display = computerMode ? 'block' : 'none';
-
-  if (!computerMode) return;
-
-  levelButtonsEl.innerHTML = '';
-  SF_LEVELS.forEach((lv, idx) => {
-    const btn = document.createElement('button');
-    btn.className = 'level-btn' + (idx === currentLevel ? ' active' : '');
-    btn.textContent = lv.label;
-    btn.addEventListener('click', () => {
-      currentLevel = idx;
-      renderLevelUI();
-    });
-    levelButtonsEl.appendChild(btn);
-  });
-}
-
-// ── Mode switching ───────────────────────────────────────────
-
-function setMode(mode) {
-  stopCvC();
-  leaveOnlineRoom();
-
-  currentMode = mode;
-
-  // Update active button
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === mode);
-  });
-
-  // Show/hide online controls
-  onlineControlsEl.style.display = (mode === MODE_PVP_ONLINE) ? 'flex' : 'none';
-  statusOnlineEl.style.display   = (mode === MODE_PVP_ONLINE) ? 'block' : 'none';
-
-  // Reset online state
-  onlineColor       = null;
-  onlineRoomCode    = null;
-  onlineReady       = false;
-  onlineOpponentName= '';
-  roomInfoEl.textContent = '';
-  joinCodeInput.value    = '';
-  statusOnlineEl.textContent = '';
-
-  renderLevelUI();
-  newGame();
+  cvcRunning = false;
 }
 
 // ── Online Play ───────────────────────────────────────────────
@@ -843,37 +1188,6 @@ function generateRoomCode() {
 }
 
 async function createOnlineGame() {
-  const code = generateRoomCode();
-  onlineRoomCode = code;
-  onlineColor    = WHITE;
-
-  roomInfoEl.innerHTML = `Your room code:<span class="room-code">${code}</span>
-    <span class="spinner"></span> Waiting for opponent…`;
-  statusOnlineEl.textContent = 'You play White';
-
-  await joinChannel(code, 'creator');
-}
-
-async function joinOnlineGame() {
-  const code = joinCodeInput.value.trim().toUpperCase();
-  if (code.length !== 6) {
-    roomInfoEl.textContent = 'Enter a valid 6-character code.';
-    return;
-  }
-  onlineRoomCode = code;
-  onlineColor    = BLACK;
-  statusOnlineEl.textContent = 'You play Black';
-  roomInfoEl.innerHTML = `Joining room ${code}… <span class="spinner"></span>`;
-  await joinChannel(code, 'joiner');
-}
-
-async function joinChannel(code, role) {
-  if (onlineChannel) {
-    await sb.removeChannel(onlineChannel);
-    onlineChannel = null;
-  }
-
-  // Try to get the user's display name
   let myName = 'Player';
   try {
     const { data: { session } } = await sb.auth.getSession();
@@ -883,6 +1197,23 @@ async function joinChannel(code, role) {
     }
   } catch {}
 
+  const code = generateRoomCode();
+  onlineRoomCode = code;
+  onlineColor    = WHITE;
+
+  opponentNameEl.textContent = 'Waiting for opponent…';
+  statusOnlineEl.innerHTML   = `Room code: <strong style="color:#c4b5fd;letter-spacing:3px">${code}</strong>`;
+  statusOnlineEl.style.display = 'block';
+
+  await joinChannel(code, 'creator', myName);
+}
+
+async function joinChannel(code, role, myName) {
+  if (onlineChannel) {
+    await sb.removeChannel(onlineChannel);
+    onlineChannel = null;
+  }
+
   const channel = sb.channel(`chess:${code}`, {
     config: { broadcast: { self: false } },
   });
@@ -891,26 +1222,33 @@ async function joinChannel(code, role) {
     .on('broadcast', { event: 'join' }, ({ payload }) => {
       onlineOpponentName = payload.name || 'Opponent';
       onlineReady = true;
-      roomInfoEl.textContent = `Playing vs ${onlineOpponentName}`;
+      opponentNameEl.textContent = onlineOpponentName;
       statusOnlineEl.textContent = `You play ${onlineColor === WHITE ? 'White' : 'Black'} vs ${onlineOpponentName}`;
-      // Both joined: fresh board
-      newGame();
+      // Restart fresh
+      gameState = createState();
+      setupBoard(gameState);
+      moveHistory = [];
+      if (currentTC && currentTC.base > 0) {
+        clockWhite = currentTC.base;
+        clockBlack = currentTC.base;
+      }
+      renderBoard();
+      updateStatus();
+      renderMoveList();
+      startClock();
     })
     .on('broadcast', { event: 'move' }, ({ payload }) => {
       if (!onlineReady) return;
-      // It's the opponent's move — apply it
-      if (gameState.turn === onlineColor) return; // shouldn't happen, but guard
+      if (gameState.turn === onlineColor) return;
       const move = {
         from: payload.from,
         to:   payload.to,
         promotion: payload.promotion || undefined,
       };
-      // Reconstruct flags
       const p = gameState.board[move.from];
       if (p && absPiece(p) === PAWN && payload.to === gameState.enPassant) {
         move.enPassant = true;
       }
-      // Detect castling
       if (p && absPiece(p) === KING && Math.abs(col(move.from) - col(move.to)) === 2) {
         move.castle = col(move.to) > col(move.from) ? 'KS' : 'QS';
       }
@@ -918,7 +1256,6 @@ async function joinChannel(code, role) {
     })
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        // Announce presence
         channel.send({
           type: 'broadcast',
           event: 'join',
@@ -926,7 +1263,8 @@ async function joinChannel(code, role) {
         });
         if (role === 'joiner') {
           onlineReady = true;
-          roomInfoEl.textContent = `Joined room ${code}`;
+          statusOnlineEl.textContent = `Joined room ${code}`;
+          startClock();
         }
       }
     });
@@ -939,37 +1277,55 @@ function leaveOnlineRoom() {
     sb.removeChannel(onlineChannel).catch(() => {});
     onlineChannel = null;
   }
-  onlineReady = false;
+  onlineReady        = false;
+  onlineColor        = null;
+  onlineRoomCode     = null;
+  onlineOpponentName = '';
+  statusOnlineEl.style.display = 'none';
+  statusOnlineEl.textContent   = '';
 }
 
-// ── Event Wiring ─────────────────────────────────────────────
+// ── Resign / Draw ─────────────────────────────────────────────
 
-btnNewGame.addEventListener('click', () => newGame());
-
-btnStopCvc.addEventListener('click', () => {
-  stopCvC();
-  gameState.gameOver = true;
-  gameState.gameOverMsg = 'Stopped.';
+btnResign.addEventListener('click', () => {
+  if (gameState.gameOver) return;
+  const loserName = currentMode === MODE_PVP_ONLINE
+    ? (onlineColor === WHITE ? 'White' : 'Black')
+    : (gameState.turn === WHITE ? 'White' : 'Black');
+  gameState.gameOver    = true;
+  gameState.gameOverMsg = `${loserName} resigned.`;
+  stopClock();
   updateStatus();
   renderBoard();
 });
 
-document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+btnDraw.addEventListener('click', () => {
+  if (gameState.gameOver) return;
+  gameState.gameOver    = true;
+  gameState.gameOverMsg = 'Draw by agreement.';
+  stopClock();
+  updateStatus();
+  renderBoard();
 });
 
-btnCreateGame.addEventListener('click', createOnlineGame);
-btnJoinGame.addEventListener('click', joinOnlineGame);
-joinCodeInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') joinOnlineGame();
+// ── Back button ───────────────────────────────────────────────
+
+btnBack.addEventListener('click', () => {
+  const inProgress = !gameState.gameOver && moveHistory.length > 0;
+  if (inProgress) {
+    if (!confirm('Return to lobby? The current game will be abandoned.')) return;
+  }
+  showLobby();
 });
 
-// ── Initialise ───────────────────────────────────────────────
+// ── CPU vs CPU button ─────────────────────────────────────────
 
-setupBoard(gameState);
-renderBoard();
-updateStatus();
-renderLevelUI();
+btnCvcOpen.addEventListener('click', () => openCvcModal());
+
+// ── Initialise ────────────────────────────────────────────────
+
+buildLobby();
+showLobby();
 
 // Preload Stockfish in the background so first AI move isn't slow
 getStockfish().catch(() => {});
