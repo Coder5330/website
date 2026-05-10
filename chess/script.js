@@ -449,6 +449,9 @@ let aiThinking      = false;
 let positionHistory = []; // position keys for 3-fold detection
 let stateHistory    = []; // full snapshots for takeback
 
+let boardFlipped    = false; // true when player's side is at the top visually (player is black)
+let playerSide      = WHITE; // which color the human controls in PvC/local mode
+
 let dragSq          = -1; // source square during drag
 let drawOfferSent   = false;
 let takebackSent    = false;
@@ -493,6 +496,7 @@ const btnResign        = document.getElementById('btn-resign');
 const btnDraw          = document.getElementById('btn-draw');
 const btnTakeback      = document.getElementById('btn-takeback');
 const btnCvcOpen       = document.getElementById('btn-cvc-open');
+const btnJoinGame      = document.getElementById('btn-join-game');
 
 // ── Toast system ──────────────────────────────────────────────
 const _toastEl = (() => {
@@ -633,19 +637,63 @@ function openOnlineModal() {
 
 // ── Computer modal ────────────────────────────────────────────
 function openComputerModal() {
+  let chosenColor = WHITE; // local to this modal
   showModal(`
     <div class="modal-title">
       Play vs Computer
       <button class="modal-close" id="m-close">&times;</button>
     </div>
     <hr class="modal-hr">
+    <div class="modal-label">Play as</div>
+    <div class="color-picker" id="m-color-pick">
+      <button class="color-btn active" data-c="1">♙ White</button>
+      <button class="color-btn" data-c="-1">♟ Black</button>
+      <button class="color-btn" data-c="0">⚄ Random</button>
+    </div>
     <div class="modal-label">Difficulty</div>
     <div class="level-grid" id="m-level-grid"></div>
     <button class="modal-primary-btn" id="m-play-computer">Play</button>
   `);
   document.getElementById('m-close').addEventListener('click', hideModal);
   renderLevelPicker('m-level-grid', currentLevel, idx => { currentLevel = idx; });
-  document.getElementById('m-play-computer').addEventListener('click', () => { hideModal(); startGame(MODE_PVC_LOCAL); });
+  document.getElementById('m-color-pick').addEventListener('click', e => {
+    const btn = e.target.closest('[data-c]');
+    if (!btn) return;
+    chosenColor = parseInt(btn.dataset.c);
+    document.querySelectorAll('#m-color-pick .color-btn').forEach(b => b.classList.toggle('active', b === btn));
+  });
+  document.getElementById('m-play-computer').addEventListener('click', () => {
+    hideModal();
+    const color = chosenColor === 0 ? (Math.random() < 0.5 ? WHITE : BLACK) : chosenColor;
+    startGame(MODE_PVC_LOCAL, { color });
+  });
+}
+
+// ── Join Game modal (standalone — no TC required) ─────────────
+function openJoinModal() {
+  showModal(`
+    <div class="modal-title">
+      Join a game
+      <button class="modal-close" id="m-close">&times;</button>
+    </div>
+    <hr class="modal-hr">
+    <div class="modal-label">Room code</div>
+    <div class="modal-join-row">
+      <input type="text" id="m-code-input" placeholder="XXXXXX" maxlength="6" autofocus>
+      <button class="modal-primary-btn" style="width:auto;margin:0;padding:9px 18px;flex-shrink:0" id="m-join-btn">Join</button>
+    </div>
+    <div class="modal-info-text" id="m-join-info">Time control is set by the host</div>
+  `);
+  document.getElementById('m-close').addEventListener('click', hideModal);
+  const doJoin = () => {
+    const code = document.getElementById('m-code-input').value.trim().toUpperCase();
+    if (code.length !== 6) { document.getElementById('m-join-info').textContent = 'Enter a valid 6-letter code.'; return; }
+    currentTC = null; // will be synced from host
+    startGame(MODE_PVP_ONLINE, { role: 'joiner', code });
+    hideModal();
+  };
+  document.getElementById('m-join-btn').addEventListener('click', doJoin);
+  document.getElementById('m-code-input').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(); });
 }
 
 // ── CvC modal ─────────────────────────────────────────────────
@@ -748,6 +796,9 @@ function renderClocks() {
   if (currentMode === MODE_PVP_ONLINE && onlineColor !== null) {
     playerColor   = onlineColor;
     opponentColor = -onlineColor;
+  } else if (currentMode === MODE_PVC_LOCAL) {
+    playerColor   = playerSide;
+    opponentColor = -playerSide;
   }
   const playerSecs   = playerColor   === WHITE ? clockWhite : clockBlack;
   const opponentSecs = opponentColor === WHITE ? clockWhite : clockBlack;
@@ -792,6 +843,8 @@ async function startGame(mode, opts = {}) {
   moveHistory     = [];
   positionHistory = [];
   stateHistory    = [];
+  playerSide      = opts.color || WHITE;
+  boardFlipped    = false; // set later once we know color
 
   gameState = createState();
   setupBoard(gameState);
@@ -813,13 +866,18 @@ async function startGame(mode, opts = {}) {
   } catch {}
 
   if (mode === MODE_PVC_LOCAL) {
+    boardFlipped = playerSide === BLACK;
     oppName = SF_LEVELS[currentLevel].label;
   } else if (mode === MODE_CVC_LOCAL) {
+    boardFlipped = false;
     oppName = SF_LEVELS[cvcLevelBlack].label;
     myName  = SF_LEVELS[cvcLevelWhite].label;
   } else if (mode === MODE_PVP_ONLINE) {
+    boardFlipped = false; // updated once color is known
     oppName = 'Waiting…';
   } else {
+    boardFlipped = false;
+    playerSide   = WHITE;
     oppName = 'Player 2';
   }
 
@@ -855,8 +913,8 @@ async function startGame(mode, opts = {}) {
 
   if (mode === MODE_CVC_LOCAL) {
     setTimeout(startCvC, 600);
-  } else if (mode === MODE_PVC_LOCAL && gameState.turn === BLACK) {
-    scheduleAI(300);
+  } else if (mode === MODE_PVC_LOCAL && gameState.turn !== playerSide) {
+    scheduleAI(300); // player chose black — AI (white) moves first
   }
 }
 
@@ -887,8 +945,14 @@ function updateBoard() {
     for (let i = 0; i < 64; i++) { if (gameState.board[i] === kp) { checkSq = i; break; } }
   }
 
-  for (let i = 0; i < 64; i++) {
-    const cell = cells[i];
+  for (let vi = 0; vi < 64; vi++) {
+    // visual index vi → board square i (flipped = black at bottom)
+    const i    = boardFlipped ? 63 - vi : vi;
+    const cell = cells[vi];
+
+    // update the square this cell represents (used by click/drag handlers)
+    if (parseInt(cell.dataset.sq) !== i) cell.dataset.sq = i;
+
     const r = (i / 8) | 0, c = i % 8;
     let cn = 'cell ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
 
@@ -902,9 +966,7 @@ function updateBoard() {
     if (p !== 0) cn += ' has-piece';
     if (cell.className !== cn) cell.className = cn;
 
-    const newHtml = p !== 0
-      ? `<span class="piece">${pieceImg(p)}</span>`
-      : '';
+    const newHtml = p !== 0 ? `<span class="piece">${pieceImg(p)}</span>` : '';
     if (cell.innerHTML !== newHtml) cell.innerHTML = newHtml;
   }
 
@@ -921,19 +983,22 @@ function sortCaptured(pieces) {
 }
 
 function renderCaptured() {
-  // capturedByWhite = black pieces white took → shown at bottom (player side)
-  // capturedByBlack = white pieces black took → shown at top (opponent side)
-  const byWhite = sortCaptured(gameState.capturedByWhite);
-  const byBlack = sortCaptured(gameState.capturedByBlack);
+  // Determine which side is at the bottom
+  const bottomIsWhite = !boardFlipped;
 
-  capturedWhiteEl.innerHTML = byWhite.map(p => pieceImg(p,   '16px')).join('');
-  capturedBlackEl.innerHTML = byBlack.map(p => pieceImg(-p,  '16px')).join('');
+  // capturedByWhite = black pieces white took; capturedByBlack = white pieces black took
+  // Bottom player's captures go in capturedWhiteEl; top opponent's in capturedBlackEl
+  const bottomCaps = sortCaptured(bottomIsWhite ? gameState.capturedByWhite : gameState.capturedByBlack);
+  const topCaps    = sortCaptured(bottomIsWhite ? gameState.capturedByBlack : gameState.capturedByWhite);
 
-  const whiteMat = byWhite.reduce((s, p) => s + PIECE_VALUE[absPiece(p)], 0);
-  const blackMat = byBlack.reduce((s, p) => s + PIECE_VALUE[absPiece(p)], 0);
-  const diff = whiteMat - blackMat;
+  // pieceImg(p) already handles the sign — just pass the raw captured piece value
+  capturedWhiteEl.innerHTML = bottomCaps.map(p => pieceImg(p, '16px')).join('');
+  capturedBlackEl.innerHTML = topCaps.map(p => pieceImg(p, '16px')).join('');
 
-  // Advantage shown on the side that's AHEAD, near their captures
+  const bottomMat = bottomCaps.reduce((s, p) => s + PIECE_VALUE[absPiece(p)], 0);
+  const topMat    = topCaps.reduce((s, p)    => s + PIECE_VALUE[absPiece(p)], 0);
+  const diff = bottomMat - topMat;
+
   advBottomEl.textContent = diff > 0 ? `+${diff}` : '';
   advTopEl.textContent    = diff < 0 ? `+${-diff}` : '';
 }
@@ -1161,7 +1226,7 @@ boardEl.addEventListener('click', e => {
 
 function isHumanTurn() {
   if (currentMode === MODE_CVC_LOCAL) return false;
-  if (currentMode === MODE_PVC_LOCAL && gameState.turn === BLACK) return false;
+  if (currentMode === MODE_PVC_LOCAL && gameState.turn !== playerSide) return false;
   return true;
 }
 
@@ -1235,7 +1300,7 @@ function executeMove(move, broadcast = true) {
     }
     if (gameState.halfmoveClock === 90) addToast('Warning: 5 moves left on 50-move rule', 'warn');
     if (gameState.halfmoveClock === 80) addToast('Warning: 10 moves left on 50-move rule', 'warn');
-    if (currentMode === MODE_PVC_LOCAL && gameState.turn === BLACK) scheduleAI(300);
+    if (currentMode === MODE_PVC_LOCAL && gameState.turn !== playerSide) scheduleAI(300);
   } else {
     addToast(gameState.gameOverMsg, 'gameover');
     saveGameResult();
@@ -1276,7 +1341,7 @@ function scheduleAI(delay) {
   if (aiThinking) return;
   aiThinking = true;
   setTimeout(async () => {
-    if (gameState.gameOver || (currentMode === MODE_PVC_LOCAL && gameState.turn !== BLACK)) {
+    if (gameState.gameOver || (currentMode === MODE_PVC_LOCAL && gameState.turn === playerSide)) {
       aiThinking = false; return;
     }
     try {
@@ -1348,6 +1413,9 @@ async function joinChannel(code, role, myName) {
       onlineReady = true;
       opponentNameEl.textContent = onlineOpponentName;
       statusOnlineEl.textContent = `You play ${onlineColor === WHITE ? 'White' : 'Black'} vs ${onlineOpponentName}`;
+      boardFlipped = (onlineColor === BLACK);
+      // Creator sends TC info to the joiner
+      channel.send({ type: 'broadcast', event: 'room_info', payload: { tc: currentTC } });
       gameState = createState();
       setupBoard(gameState);
       moveHistory = [];
@@ -1358,6 +1426,15 @@ async function joinChannel(code, role, myName) {
       updateStatus();
       renderMoveList();
       startClock();
+    })
+    .on('broadcast', { event: 'room_info' }, ({ payload }) => {
+      // Joiner receives TC from creator
+      if (payload.tc !== undefined) {
+        currentTC = payload.tc;
+        if (currentTC && currentTC.base > 0) { clockWhite = currentTC.base; clockBlack = currentTC.base; }
+        else { clockWhite = clockBlack = 0; }
+        renderClocks();
+      }
     })
     .on('broadcast', { event: 'move' }, ({ payload }) => {
       if (!onlineReady || gameState.turn === onlineColor) return;
@@ -1435,7 +1512,9 @@ async function joinChannel(code, role, myName) {
         channel.send({ type: 'broadcast', event: 'join', payload: { name: myName, role } });
         if (role === 'joiner') {
           onlineReady = true;
+          boardFlipped = true; // joiner plays black, board flipped
           statusOnlineEl.textContent = `Joined room ${code}`;
+          updateBoard(); // re-render with flip
           startClock();
         }
       }
@@ -1515,6 +1594,7 @@ btnBack.addEventListener('click', () => {
 });
 
 btnCvcOpen.addEventListener('click', openCvcModal);
+btnJoinGame.addEventListener('click', openJoinModal);
 
 // ── Save game to Supabase ────────────────────────────────────
 async function saveGameResult() {
