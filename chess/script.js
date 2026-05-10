@@ -452,9 +452,10 @@ let stateHistory    = []; // full snapshots for takeback
 let boardFlipped    = false; // true when player's side is at the top visually (player is black)
 let playerSide      = WHITE; // which color the human controls in PvC/local mode
 
-let dragSq          = -1; // source square during drag
-let drawOfferSent   = false;
-let takebackSent    = false;
+let dragSq              = -1; // source square during drag
+let drawOfferSent       = false;
+let takebackSent        = false;
+let matchmakingChannel  = null; // realtime channel while searching for opponent
 
 // Online state
 let onlineColor        = null;
@@ -580,63 +581,122 @@ function hideModal() {
 }
 modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) hideModal(); });
 
-// ── Setup modal ───────────────────────────────────────────────
+// ── Setup modal (Lichess-style: Quick Pair is primary) ─────────
 function openSetupModal(tc) {
   currentTC = tc;
+  const catLabel = CAT_LABELS[tc.cat] || tc.cat;
   showModal(`
     <div class="modal-title">
-      Choose how to play
+      <span>${tc.label} <span class="tc-cat ${tc.cat}" style="font-size:12px">${catLabel}</span></span>
       <button class="modal-close" id="m-close">&times;</button>
     </div>
-    <hr class="modal-hr">
-    <button class="modal-opt-btn" id="m-friend">&#128101; Play with a friend</button>
-    <button class="modal-opt-btn" id="m-computer">&#129302; Play vs Computer</button>
-    <button class="modal-opt-btn" id="m-local">&#127968; Local (2 players)</button>
+    <button class="modal-primary-btn" id="m-quickpair" style="margin-top:4px">⚡ Quick Pair — find an opponent</button>
+    <hr class="modal-hr" style="margin:18px 0 14px">
+    <button class="modal-opt-btn" id="m-friend">🤝 Play with a friend</button>
+    <button class="modal-opt-btn" id="m-computer">🤖 Play vs Computer</button>
+    <button class="modal-opt-btn" id="m-local">🏠 Local (2 players, same screen)</button>
   `);
   document.getElementById('m-close').addEventListener('click', hideModal);
-  document.getElementById('m-friend').addEventListener('click', openOnlineModal);
-  document.getElementById('m-computer').addEventListener('click', openComputerModal);
+  document.getElementById('m-quickpair').addEventListener('click', () => { hideModal(); startMatchmaking(tc); });
+  document.getElementById('m-friend').addEventListener('click', () => { hideModal(); startGame(MODE_PVP_ONLINE, { role: 'creator' }); });
+  document.getElementById('m-computer').addEventListener('click', () => openComputerModal(tc));
   document.getElementById('m-local').addEventListener('click', () => { hideModal(); startGame(MODE_PVP_LOCAL); });
 }
 
-// ── Online modal ──────────────────────────────────────────────
-function openOnlineModal() {
-  showModal(`
-    <div class="modal-title">
-      Play with a friend
-      <button class="modal-close" id="m-close">&times;</button>
-    </div>
-    <hr class="modal-hr">
-    <button class="modal-opt-btn" id="m-create">Create Game — get a code</button>
-    <button class="modal-opt-btn" id="m-join-show">Join Game — enter a code</button>
-    <div id="m-online-sub" style="display:none"></div>
-  `);
-  document.getElementById('m-close').addEventListener('click', hideModal);
-  document.getElementById('m-create').addEventListener('click', () => { startGame(MODE_PVP_ONLINE, { role: 'creator' }); hideModal(); });
-  document.getElementById('m-join-show').addEventListener('click', () => {
-    const sub = document.getElementById('m-online-sub');
-    sub.style.display = 'block';
-    sub.innerHTML = `
-      <div class="modal-sub">
-        <div class="modal-sub-title">Enter room code</div>
-        <div class="modal-join-row">
-          <input type="text" id="m-code-input" placeholder="XXXXXX" maxlength="6">
-          <button class="modal-opt-btn" style="width:auto;flex-shrink:0;margin:0" id="m-join-btn">Join</button>
-        </div>
-        <div class="modal-info-text" id="m-join-info"></div>
-      </div>`;
-    document.getElementById('m-join-btn').addEventListener('click', () => {
-      const code = document.getElementById('m-code-input').value.trim().toUpperCase();
-      if (code.length !== 6) { document.getElementById('m-join-info').textContent = 'Enter a valid 6-character code.'; return; }
-      startGame(MODE_PVP_ONLINE, { role: 'joiner', code });
-      hideModal();
-    });
-    document.getElementById('m-code-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('m-join-btn').click(); });
+// ── Matchmaking ───────────────────────────────────────────────
+async function startMatchmaking(tc) {
+  const { data: { session } } = await sb.auth.getSession().catch(() => ({ data: {} }));
+  if (!session) { addToast('Sign in to use Quick Pair', 'warn'); return; }
+  const userId = session.user.id;
+  const { data: userRow } = await sb.from('users').select('display_name, chess_rating').eq('id', userId).maybeSingle().catch(() => ({ data: null }));
+  const displayName = userRow?.display_name || session.user.email?.split('@')[0] || 'Player';
+  const rating = userRow?.chess_rating ?? 1200;
+
+  showMatchmakingModal(tc, displayName, rating);
+
+  const { data: result, error } = await sb.rpc('chess_match_or_queue', {
+    p_user_id:    userId,
+    p_display_name: displayName,
+    p_tc_label:   tc.label,
+    p_tc_base:    tc.base,
+    p_tc_inc:     tc.inc,
+    p_rating:     rating,
   });
+
+  if (error || !result) {
+    addToast('Matchmaking unavailable — try Play with a friend', 'warn');
+    hideModal();
+    return;
+  }
+
+  if (result.matched) {
+    hideModal();
+    startGame(MODE_PVP_ONLINE, {
+      role: 'matched',
+      code: result.room_code,
+      onlineColor: result.color,
+      opponentName: result.opponent_name,
+    });
+  } else {
+    // Waiting — update modal to searching state and subscribe
+    updateMatchmakingModal(tc);
+    subscribeMatchmaking(userId, tc, displayName);
+  }
+}
+
+function showMatchmakingModal(tc, displayName, rating) {
+  showModal(`
+    <div class="matchmaking-modal">
+      <div class="matchmaking-spinner-wrap"><div class="matchmaking-spinner"></div></div>
+      <div class="matchmaking-title">Finding opponent…</div>
+      <div class="matchmaking-tc">${tc.label} <span class="tc-cat ${tc.cat}">${CAT_LABELS[tc.cat]}</span></div>
+      <div class="matchmaking-info" id="mm-info">Connecting…</div>
+      <button class="modal-opt-btn" id="mm-cancel" style="margin-top:16px">Cancel</button>
+    </div>
+  `);
+  document.getElementById('mm-cancel').addEventListener('click', cancelMatchmaking);
+}
+
+function updateMatchmakingModal(tc) {
+  const info = document.getElementById('mm-info');
+  if (info) info.textContent = 'Searching for a player…';
+}
+
+async function cancelMatchmaking() {
+  if (matchmakingChannel) { await sb.removeChannel(matchmakingChannel); matchmakingChannel = null; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await sb.from('chess_queue').delete().eq('user_id', session.user.id).eq('status', 'waiting');
+  } catch {}
+  hideModal();
+}
+
+function subscribeMatchmaking(userId, tc, myName) {
+  if (matchmakingChannel) { sb.removeChannel(matchmakingChannel); matchmakingChannel = null; }
+  matchmakingChannel = sb.channel(`mmq:${userId}`)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chess_queue',
+        filter: `user_id=eq.${userId}` },
+      async ({ new: row }) => {
+        if (row?.status !== 'matched') return;
+        // Get opponent name from their queue row
+        const { data: oppRow } = await sb.from('chess_queue')
+          .select('display_name').eq('user_id', row.matched_with).maybeSingle().catch(() => ({ data: null }));
+        const oppName = oppRow?.display_name || 'Opponent';
+        if (matchmakingChannel) { sb.removeChannel(matchmakingChannel); matchmakingChannel = null; }
+        hideModal();
+        startGame(MODE_PVP_ONLINE, {
+          role: 'matched',
+          code: row.room_code,
+          onlineColor: row.color,
+          opponentName: oppName,
+        });
+      })
+    .subscribe();
 }
 
 // ── Computer modal ────────────────────────────────────────────
-function openComputerModal() {
+function openComputerModal(tc) {
+  if (tc) currentTC = tc;
   let chosenColor = WHITE; // local to this modal
   showModal(`
     <div class="modal-title">
@@ -897,7 +957,20 @@ async function startGame(mode, opts = {}) {
   renderClocks();
 
   if (mode === MODE_PVP_ONLINE) {
-    if (opts.role === 'creator') {
+    if (opts.role === 'matched') {
+      // Pre-matched via matchmaking — both sides already know color + opponent
+      onlineColor        = opts.onlineColor;
+      onlineOpponentName = opts.opponentName || 'Opponent';
+      boardFlipped       = (onlineColor === BLACK);
+      onlineRoomCode     = opts.code;
+      opponentNameEl.textContent = onlineOpponentName;
+      statusOnlineEl.innerHTML   = `Matched! You play <strong>${onlineColor === WHITE ? 'White ♙' : 'Black ♟'}</strong> vs ${onlineOpponentName}`;
+      statusOnlineEl.style.display = 'block';
+      onlineReady = true;
+      startClock();
+      updateBoard();
+      await joinChannel(opts.code, onlineColor === WHITE ? 'creator' : 'joiner', myName, true);
+    } else if (opts.role === 'creator') {
       await createOnlineGame();
     } else if (opts.role === 'joiner' && opts.code) {
       onlineRoomCode = opts.code;
@@ -1402,19 +1475,20 @@ async function createOnlineGame() {
   await joinChannel(code, 'creator', myName);
 }
 
-async function joinChannel(code, role, myName) {
+async function joinChannel(code, role, myName, preMatched = false) {
   if (onlineChannel) { await sb.removeChannel(onlineChannel); onlineChannel = null; }
 
   const channel = sb.channel(`chess:${code}`, { config: { broadcast: { self: false } } });
 
   channel
     .on('broadcast', { event: 'join' }, ({ payload }) => {
+      if (preMatched) return; // already matched — ignore handshake
       onlineOpponentName = payload.name || 'Opponent';
       onlineReady = true;
       opponentNameEl.textContent = onlineOpponentName;
       statusOnlineEl.textContent = `You play ${onlineColor === WHITE ? 'White' : 'Black'} vs ${onlineOpponentName}`;
       boardFlipped = (onlineColor === BLACK);
-      // Creator sends TC info to the joiner
+      // Creator sends TC to joiner (for friend games where joiner has no TC)
       channel.send({ type: 'broadcast', event: 'room_info', payload: { tc: currentTC } });
       gameState = createState();
       setupBoard(gameState);
@@ -1428,7 +1502,7 @@ async function joinChannel(code, role, myName) {
       startClock();
     })
     .on('broadcast', { event: 'room_info' }, ({ payload }) => {
-      // Joiner receives TC from creator
+      if (preMatched) return; // TC already known
       if (payload.tc !== undefined) {
         currentTC = payload.tc;
         if (currentTC && currentTC.base > 0) { clockWhite = currentTC.base; clockBlack = currentTC.base; }
@@ -1510,11 +1584,11 @@ async function joinChannel(code, role, myName) {
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         channel.send({ type: 'broadcast', event: 'join', payload: { name: myName, role } });
-        if (role === 'joiner') {
+        if (role === 'joiner' && !preMatched) {
           onlineReady = true;
-          boardFlipped = true; // joiner plays black, board flipped
+          boardFlipped = true;
           statusOnlineEl.textContent = `Joined room ${code}`;
-          updateBoard(); // re-render with flip
+          updateBoard();
           startClock();
         }
       }
@@ -1524,10 +1598,15 @@ async function joinChannel(code, role, myName) {
 }
 
 function leaveOnlineRoom() {
+  if (matchmakingChannel) { sb.removeChannel(matchmakingChannel).catch(() => {}); matchmakingChannel = null; }
   if (onlineChannel) { sb.removeChannel(onlineChannel).catch(() => {}); onlineChannel = null; }
   onlineReady = false; onlineColor = null; onlineRoomCode = null; onlineOpponentName = '';
   statusOnlineEl.style.display = 'none';
   statusOnlineEl.textContent   = '';
+  // Remove from queue if we were searching
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if (session) sb.from('chess_queue').delete().eq('user_id', session.user.id).eq('status', 'waiting').then(() => {});
+  }).catch(() => {});
 }
 
 // ── Button handlers ───────────────────────────────────────────
